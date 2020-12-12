@@ -97,6 +97,109 @@ global_var GLfloat transform_4X4[] = {
 
 /* --- */
 
+/* *
+ * clamp value between min and max values
+ *
+ * @param value target.
+ * @param min value target.
+ * @param max value target.
+ * @return value between min and max.
+ * */
+internal int
+int_clamp(int value, int min_value, int max_value)
+{
+    return max(min_value, min(max_value, value));
+}
+
+// TODO() move to own file
+/* TMP VEC 3 */
+
+struct vec3{
+    float x;
+    float y;
+    float z;
+};
+
+struct vec3 
+vec3_new(float x, float y, float z)
+{
+    struct vec3 v3 = (struct vec3){.x=x, .y=y, .z=z};
+    return v3;
+}
+
+struct vec3
+vec3_add(const struct vec3 *va, const struct vec3 *vb)
+{
+    return vec3_new(va->x + vb->x, va->y + vb->y, va->z + vb->z);
+}
+
+struct vec3
+vec3_sub(const struct vec3 *va, const struct vec3 *vb)
+{
+    return vec3_new(va->x - vb->x, va->y - vb->y, va->z - vb->z);
+}
+
+struct vec3
+vec3_scale(const struct vec3 *va, float by)
+{
+    return vec3_new(va->x * by, va->y * by, va->z * by);
+}
+
+struct vec3
+vec3_divide(const struct vec3 *va, float by)
+{
+    assert(by != 0.0f);
+    return vec3_new(va->x / by, va->y / by, va->z / by);
+}
+
+float
+vec3_at(const struct vec3 *va, int id)
+{
+    id = int_clamp(id, 0, 2);
+    switch(id)
+    {
+        case 0:
+            return va->x;
+        case 1:
+            return va->y;
+        case 2:
+            return va->z;
+        default:
+            return 1.0f;
+    }
+}
+
+float 
+vec3_dot_product(const struct vec3 *va, const struct vec3 *vb)
+{
+    return (va->x * vb->x) + (va->y * vb->y) + (va->z * vb->z);
+}
+
+struct vec3
+vec3_cross_product(const struct vec3 *va, const struct vec3 *vb)
+{
+    float x = (va->y * vb->z) - (va->z * vb->y);
+    float y = (va->z * vb->x) - (va->x * vb->z);
+    float z = (va->x * vb->y) - (va->y * vb->x);
+    return vec3_new(x, y, z);
+}
+
+float
+vec3_length(const struct vec3 *va)
+{
+    float dot = vec3_dot_product(va, va);
+    assert(dot != 0.0f);
+    return sqrtf(dot);
+}
+
+struct vec3
+vec3_normal(const struct vec3 *va)
+{
+    return vec3_divide(va, vec3_length(va));
+}
+
+/* --- */
+
 
 /* --- */
 
@@ -239,7 +342,7 @@ compile_shader(GLuint shader, const char* source, bool check_compile_status)
 /* *
  * link shaders to shader program
  *
- * @param program id generated from glad_glCreateProgram.
+ * @param program id generated from glCreateProgram.
  * @param vert shader id from glCreateShader.
  * @param frag shader id from glCreateShader.
  * @param if it should check link status for errors.
@@ -299,6 +402,53 @@ get_text_from_file(const char* file_path, char *buffer)
     return true;
 }
 
+/*
+ * create shaders vert and frag from file and link to shader program
+ *
+ * @param program id generated from glCreateProgram.
+ * @param v_file path for vertex shader data.
+ * @param f_file path for fragment shader data.
+ * @return true if shaders were created and linked to program.
+ * */
+internal bool
+create_shaders_and_link_to_program(GLuint program, const char* v_file, const char* f_file)
+{
+    char vert_buffer[512];
+    if(not get_text_from_file(v_file, vert_buffer))
+    {
+        return false;
+    }
+
+    GLuint v_shader = glad_glCreateShader(GL_VERTEX_SHADER);
+    if(not compile_shader(v_shader, vert_buffer, true))
+    {
+        return false;
+    }
+
+    char frag_buffer[512];
+    if(not get_text_from_file(f_file, frag_buffer))
+    {
+        return false;
+    }
+
+    GLuint f_shader = glad_glCreateShader(GL_FRAGMENT_SHADER);
+    if(not compile_shader(f_shader, frag_buffer, true))
+    {
+        return false;
+    }
+
+    if(not link_shaders(program, v_shader, f_shader, true))
+    {
+        return false;
+    } 
+
+    // CLEAN UP
+    glad_glDeleteShader(v_shader);
+    glad_glDeleteShader(f_shader);
+    
+    return true;
+}
+
 /* *
  * print title to console
  * */
@@ -333,6 +483,8 @@ key_callback(GLFWwindow *window, int key, int scancode, int action, int modes)
 
 int main(void)
 {
+
+    struct vec3 v3 = new_vec3(10.0f, 11.0f, 12.0f);
 
     title();
 
@@ -405,45 +557,15 @@ int main(void)
     glad_glBindBuffer(GL_ARRAY_BUFFER, colour_vbo);
     glad_glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
    
-    // COMPILE SHADERS
-    char vert_buffer[512];
-    if(not get_text_from_file(VERT_FILE, vert_buffer))
-    {
-        return EXIT_FAILURE;
-    }
-    const char* vert_data = vert_buffer;
-    GLuint v_shader = glad_glCreateShader(GL_VERTEX_SHADER);
-    if(not compile_shader(v_shader, vert_data, true))
-    {
-        return EXIT_FAILURE;
-    }
-
-    char frag_buffer[512];
-    if(not get_text_from_file(FRAG_FILE, frag_buffer))
-    {
-        return EXIT_FAILURE;
-    }
-    const char* frag_text = frag_buffer;
-    GLuint f_shader = glad_glCreateShader(GL_FRAGMENT_SHADER);
-    if(not compile_shader(f_shader, frag_text, true))
-    {
-        return EXIT_FAILURE;
-    }
-
-
-    GLuint program = glad_glCreateProgram();
-    if(not link_shaders(program, v_shader, f_shader, true))
-    {
-        return EXIT_FAILURE;
-    } 
-
-    // CLEAN UP
-    glad_glDeleteShader(v_shader);
-    glad_glDeleteShader(f_shader);
     
+    // SHADER PROGRAM
+    GLuint program = glad_glCreateProgram();
+    if(not create_shaders_and_link_to_program(program, VERT_FILE, FRAG_FILE))
+    {
+        return EXIT_FAILURE;
+    }
 
     /* --- */
-    // GLfloat angle = 1.0f;
 
     // speed
     double speed = 0.2;
@@ -469,31 +591,6 @@ int main(void)
             counter = 0;
         }
         ++counter;
-        /* 
-        angle += 0.05f;
-
-        GLfloat rotate_x_4X4[] = {
-            1.0f, 0.0f,         0.0f,        0.0f,
-            0.0f, cosf(angle), -sinf(angle), 0.0f,
-            0.0f, sinf(angle),  cosf(angle), 0.0f,
-            0.0f, 0.0f,         0.0f,        1.0f
-        };
-
-
-        GLfloat rotate_y_4X4[] = {
-             cosf(angle), 0.0f,  sinf(angle), 0.0f,
-             0.0f,        1.0f,  0.0f,        0.0f,
-            -sinf(angle),0.0f,  cosf(angle), 0.0f,
-             0.0f,        0.0f,  0.0f,        1.0f
-        };
-        
-        GLfloat rotate_z_4X4[] = {
-            cosf(angle), -sinf(angle), 0.0f, 0.0f,
-            sinf(angle),  cosf(angle), 0.0f, 0.0f,
-            0.0f,         0.0f,        1.0f, 0.0f,
-            0.0f,         0.0f,        0.0f, 1.0f
-        };
-        */
 
         // move by updating transform matrix
         speed = fabs(last_pos) > 1.0 ? -speed : speed;
@@ -511,9 +608,6 @@ int main(void)
         int transform_local = glad_glGetUniformLocation(program, "transform");
         glad_glUniformMatrix4fv(transform_local, 1, GL_FALSE, transform_4X4);
         
-        // int rotate_local = glad_glGetUniformLocation(program, "rotate");
-        // glad_glUniformMatrix4fv(rotate_local, 1, GL_FALSE, rotate_z_4X4);
-        
         glad_glBindVertexArray(vao);
         glad_glDrawArrays(GL_TRIANGLES, 0, 3);
        
@@ -525,18 +619,10 @@ int main(void)
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-   
-    // Windows will clean up 
-
-    // CLEAN UP SHADER
-    //glad_glDeleteVertexArrays(1, &vao);
-    //glad_glDeleteBuffers(1, &points_vbo);
-    //glad_glDeleteBuffers(1, &colour_vbo);
-    //glad_glDeleteProgram(program);
 
     // CLEAN UP WINDOW
-    //glfwDestroyWindow(window);
-    //glfwTerminate();
+    glfwDestroyWindow(window);
+    glfwTerminate();
 
     return EXIT_SUCCESS;
 }
