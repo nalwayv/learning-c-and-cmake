@@ -32,6 +32,8 @@
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
 
+#include "src/vec3.h"
+
 // #define DEBUG_MODE
 
 #define GL_LOG_FILE "./gl.log"
@@ -57,9 +59,7 @@ const char* NAME = "GLFW CMAKE";
  * uniform: global with data passed in from cpu
  * */
 
-
 /* --- */
-
 
 /* GLOBALS */
 
@@ -97,6 +97,231 @@ global_var GLfloat transform_4X4[] = {
 
 /* --- */
 
+/* TEMP */
+
+
+struct mat2 {
+    union {
+        struct {
+            float _01, _02,
+                  _11, _12;
+        };
+
+        float arr[4];
+    };
+};
+
+struct mat3 {
+    union {
+        struct{
+            float _01, _02, _03,
+                  _11, _12, _13,
+                  _21, _22, _23;
+        };
+
+        float arr[9];
+    };
+};
+
+
+struct mat4 {
+    union {
+        struct {
+            float _01, _02, _03, _04,
+                  _11, _12, _13, _14,
+                  _21, _22, _23, _24,
+                  _31, _32, _33, _34;
+        };
+
+        float arr[16];
+    };
+};
+
+struct mat3 mat3_zero(){
+    struct mat3 m3;
+    m3._01 = m3._02 = m3._03 = 0.0f;
+    m3._11 = m3._12 = m3._13 = 0.0f;
+    m3._21 = m3._22 = m3._23 = 0.0f;
+    return m3;
+}
+
+struct mat3 mat3_identity()
+{
+    struct mat3 m3;
+    m3._01 = m3._12 = m3._23 = 1.0f;
+    m3._02 = m3._03 = m3._11 = 0.0f;
+    m3._13 = m3._21 = m3._22 = 0.0f;
+    return m3;
+}
+
+struct mat3 mat3_add(const struct mat3 *a, const struct mat3 *b)
+{
+    struct mat3 m3;
+    for(int i = 0; i < 9; ++i)
+    {
+        m3.arr[i] = a->arr[i] + b->arr[i];
+    }
+    return m3;
+}
+
+struct mat3 mat3_sub(const struct mat3 *a, const struct mat3 *b)
+{
+    struct mat3 m3;
+    for(int i = 0; i < 9; ++i)
+    {
+        m3.arr[i] = a->arr[i] - b->arr[i];
+    }
+    return m3;
+}
+
+struct mat3 mat3_scale(const struct mat3 *a, float by)
+{
+    struct mat3 m3;
+    for(int i = 0; i < 9; ++i)
+    {
+        m3.arr[i] = a->arr[i] * by;
+    }
+    return m3;
+}
+
+bool matrix_multiply(float *out, const float *arrA, int colA, int rowA, const float *arrB, int rowB, int colB)
+{
+    if(colA != rowB)
+    {
+        return false;
+    }
+
+    for(int i = 0; i < rowA; ++i)
+    {
+        for (int j = 0; j < colB; ++j)
+        {
+            int id = colB * i + j;
+            out[id] = 0.0f;
+            for(int k = 0; k < rowB; ++k)
+            {
+                int idA = colA * i + k;
+                int idB = colB * k + j;
+                out[id] += arrA[idA] * arrB[idB];
+            }
+        }
+    }
+
+    return true;
+}
+
+struct mat3 mat3_mul(const struct mat3 *a, const struct mat3 *b)
+{
+    struct mat3 m3; 
+    bool fail = matrix_multiply(m3.arr, a->arr, 3, 3, b->arr, 3,3);
+    assert(not fail);
+    
+    return m3;
+}
+
+struct mat3 mat3_rotate_x(float by)
+{
+    struct mat3 r;
+    
+    r._01 = 1.0;
+    r._02 = 0.0f;
+    r._03 = 0.0f;
+
+    r._11 = 0.0f;
+    r._12 = cosf(by);
+    r._13 = -sinf(by);
+    
+    r._21 = 0.0f;
+    r._22 = sinf(by);
+    r._23 = cosf(by);
+    
+    return r;
+}
+
+struct mat3 mat3_rotate_y(float by)
+{
+    struct mat3 r;
+    
+    r._01 = cosf(by);
+    r._02 = 0.0f;
+    r._03 = sinf(by);
+
+    r._11 = 0.0f;
+    r._12 = 1.0f;
+    r._13 = 0.0f;
+    
+    r._21 = -sinf(by);
+    r._22 = 0.0f;
+    r._23 = cosf(by);
+    
+    return r;
+}
+
+struct mat3 mat3_rotate_z(float by)
+{
+    struct mat3 r;
+    
+    r._01 = cosf(by);
+    r._02 = -sinf(by);
+    r._03 = 0.0f;
+
+    r._11 = sinf(0.0f);
+    r._12 = cosf(by);
+    r._13 = 0.0f;
+    
+    r._21 = 0.0f;
+    r._22 = 0.0f;
+    r._23 = 1.0f;
+    
+    return r;
+}
+
+struct mat3 mat3_inv(const struct mat3 *m3)
+{
+    struct mat3 res;
+    /* *
+     * a b c
+     * d e f
+     * g h i
+     * */
+    float a = m3->_01;
+    float b = m3->_02;
+    float c = m3->_03;
+
+    float d = m3->_11;
+    float e = m3->_12;
+    float f = m3->_13;
+    
+    float g = m3->_21;
+    float h = m3->_22;
+    float i = m3->_23;
+
+    res._01 =   e * i - f * h;
+    res._02 = -(b * i - h * c);
+    res._03 =   b * f - e * c;
+    res._11 = -(d * i - g * f);
+    res._12 =   a * i - c * g;
+    res._13 = -(a * f - d * c);
+    res._21 =   d * h - g * e;
+    res._22 = -(a * h - g * b);
+    res._23 =   a * e - b * d;
+
+    return mat3_scale(&res, 1.0f / (a * res._01 + b * res._11 + c * res._21));
+}
+
+void matrix_print(const float *arr, int row, int col)
+{
+    for(int i = 0; i < row; ++i)
+    {
+        for(int j = 0; j < col; ++j)
+        {
+            printf("%.2f ", arr[col * i + j]);
+        }
+        printf("\n");
+    }
+}
+
+/* --- */
+
 /* *
  * clamp value between min and max values
  *
@@ -108,100 +333,8 @@ global_var GLfloat transform_4X4[] = {
 internal int
 int_clamp(int value, int min_value, int max_value)
 {
-    return max(min_value, min(max_value, value));
+    return fmax(min_value, fmin(max_value, value));
 }
-
-// TODO() move to own file
-/* TMP VEC 3 */
-
-struct vec3{
-    float x;
-    float y;
-    float z;
-};
-
-struct vec3 
-vec3_new(float x, float y, float z)
-{
-    struct vec3 v3 = (struct vec3){.x=x, .y=y, .z=z};
-    return v3;
-}
-
-struct vec3
-vec3_add(const struct vec3 *va, const struct vec3 *vb)
-{
-    return vec3_new(va->x + vb->x, va->y + vb->y, va->z + vb->z);
-}
-
-struct vec3
-vec3_sub(const struct vec3 *va, const struct vec3 *vb)
-{
-    return vec3_new(va->x - vb->x, va->y - vb->y, va->z - vb->z);
-}
-
-struct vec3
-vec3_scale(const struct vec3 *va, float by)
-{
-    return vec3_new(va->x * by, va->y * by, va->z * by);
-}
-
-struct vec3
-vec3_divide(const struct vec3 *va, float by)
-{
-    assert(by != 0.0f);
-    return vec3_new(va->x / by, va->y / by, va->z / by);
-}
-
-float
-vec3_at(const struct vec3 *va, int id)
-{
-    id = int_clamp(id, 0, 2);
-    switch(id)
-    {
-        case 0:
-            return va->x;
-        case 1:
-            return va->y;
-        case 2:
-            return va->z;
-        default:
-            return 1.0f;
-    }
-}
-
-float 
-vec3_dot_product(const struct vec3 *va, const struct vec3 *vb)
-{
-    return (va->x * vb->x) + (va->y * vb->y) + (va->z * vb->z);
-}
-
-struct vec3
-vec3_cross_product(const struct vec3 *va, const struct vec3 *vb)
-{
-    float x = (va->y * vb->z) - (va->z * vb->y);
-    float y = (va->z * vb->x) - (va->x * vb->z);
-    float z = (va->x * vb->y) - (va->y * vb->x);
-    return vec3_new(x, y, z);
-}
-
-float
-vec3_length(const struct vec3 *va)
-{
-    float dot = vec3_dot_product(va, va);
-    assert(dot != 0.0f);
-    return sqrtf(dot);
-}
-
-struct vec3
-vec3_normal(const struct vec3 *va)
-{
-    return vec3_divide(va, vec3_length(va));
-}
-
-/* --- */
-
-
-/* --- */
 
 /* *
  * clear current log file info and start again with current time
@@ -483,10 +616,27 @@ key_callback(GLFWwindow *window, int key, int scancode, int action, int modes)
 
 int main(void)
 {
-
-    struct vec3 v3 = new_vec3(10.0f, 11.0f, 12.0f);
-
     title();
+
+    struct vec3 a = vec3_new(10.0f, 10.0f, 10.0f);
+    struct vec3 b = vec3_new(10.0f, 10.0f, 10.0f);
+    struct vec3 c = vec3_add(&a, &b);
+    printf("X: %0.2f, Y: %0.2f, Z: %0.2f\n", c.x, c.y, c.z);
+
+
+    struct mat3 m1 = mat3_zero();
+    m1.arr[0] = 1.0f;
+    m1.arr[4] = 2.0f;
+    m1.arr[8] = 3.0f;
+
+    struct mat3 m2 = mat3_zero();
+    m2.arr[0] = 4.0f;
+    m2.arr[4] = 5.0f;
+    m2.arr[8] = 6.0f;
+
+    struct mat3 m3 = mat3_mul(&m1, &m2);
+    matrix_print(m3.arr, 3, 3);
+
 
     assert(restart_gl_log());
     gl_log("GLFW START: version %s\n", glfwGetVersionString());
@@ -568,8 +718,8 @@ int main(void)
     /* --- */
 
     // speed
-    double speed = 0.2;
-    double last_pos = 0.0;
+    // double speed = 0.2;
+    // double last_pos = 0.0;
 
     // fps
     double previous = glfwGetTime();
@@ -593,9 +743,9 @@ int main(void)
         ++counter;
 
         // move by updating transform matrix
-        speed = fabs(last_pos) > 1.0 ? -speed : speed;
-        transform_4X4[12] = elapsed * speed + last_pos;
-        last_pos = transform_4X4[12];
+        // speed = fabs(last_pos) > 1.0 ? -speed : speed;
+        // transform_4X4[12] = elapsed * speed + last_pos;
+        // last_pos = transform_4X4[12];
 
 
         glad_glClearColor(0.1, 0.1, 0.1, 1.0);
@@ -605,8 +755,8 @@ int main(void)
 
         /* DRAW */
         
-        int transform_local = glad_glGetUniformLocation(program, "transform");
-        glad_glUniformMatrix4fv(transform_local, 1, GL_FALSE, transform_4X4);
+        // int transform_local = glad_glGetUniformLocation(program, "transform");
+        // glad_glUniformMatrix4fv(transform_local, 1, GL_FALSE, transform_4X4);
         
         glad_glBindVertexArray(vao);
         glad_glDrawArrays(GL_TRIANGLES, 0, 3);
