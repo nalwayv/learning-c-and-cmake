@@ -32,7 +32,8 @@
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
 
-#include "src/vec3.h"
+#include "src/vec.h"
+#include "src/matrix.h"
 
 // #define DEBUG_MODE
 
@@ -94,369 +95,6 @@ global_var GLfloat transform_4X4[] = {
     0.0f, 0.0f, 1.0f, 0.0f, // vz
     0.5f, 0.0f, 0.0f, 1.0f  // transform 1
 };
-
-/* --- */
-
-/* TEMP */
-
-struct mat2 {
-    union {
-        struct {
-            float _11, _12,
-                  _21, _22;
-        };
-
-        float arr[4];
-    };
-};
-
-struct mat3 {
-    union {
-        struct{
-            float _11, _12, _13,
-                  _21, _22, _23,
-                  _31, _32, _33;
-        };
-
-        float arr[9];
-    };
-};
-
-struct mat4 {
-    union {
-        struct {
-            float _11, _12, _13, _14,
-                  _21, _22, _23, _24,
-                  _31, _32, _33, _34,
-                  _41, _42, _43, _44;
-        };
-
-        float arr[16];
-    };
-};
-
-bool matrix_multiply(float *out, const float *arrA, int colA, int rowA, const float *arrB, int rowB, int colB)
-{
-    if(colA != rowB)
-    {
-        return false;
-    }
-
-    for(int i = 0; i < rowA; ++i)
-    {
-        for (int j = 0; j < colB; ++j)
-        {
-            int id = (colB * i) + j;
-            out[id] = 0.0f;
-
-            for(int k = 0; k < rowB; ++k)
-            {
-                int idA = (colA * i) + k;
-                int idB = (colB * k) + j;
-                out[id] += arrA[idA] * arrB[idB];
-            }
-        }
-    }
-
-    return true;
-}
-
-void matrix_transpose(float *out, const float* arr, int cols, int rows)
-{
-    int n = cols*rows;
-    for(int i = 0; i < n; ++i)
-    {
-        int r = i / rows;
-        int c = i % rows;
-        int id = (cols * c) + r;
-        out[i] = arr[id];
-    }
-}
-
-void matrix_print(const float *arr, int row, int col)
-{
-    for(int i = 0; i < row; ++i)
-    {
-        for(int j = 0; j < col; ++j)
-        {
-            int id = (col * i) + j;
-            printf("%.2f ", arr[id]);
-        }
-        printf("\n");
-    }
-}
-
-struct mat2 mat2_zero(){
-    struct mat2 m2;
-    m2._11 = m2._12 = 0.0f;
-    m2._21 = m2._22 = 0.0f;
-    return m2;
-}
-
-struct mat3 mat3_zero(){
-    struct mat3 m3;
-    m3._11 = m3._12 = m3._13 = 0.0f;
-    m3._21 = m3._22 = m3._23 = 0.0f;
-    m3._31 = m3._32 = m3._33 = 0.0f;
-    return m3;
-}
-
-struct mat4 mat4_zero(){
-    struct mat4 m4;
-    m4._11 = m4._12 = m4._13 = m4._14 = 0.0f;
-    m4._21 = m4._22 = m4._23 = m4._24 = 0.0f;
-    m4._31 = m4._32 = m4._33 = m4._34 = 0.0f;
-    m4._41 = m4._42 = m4._43 = m4._44 = 0.0f;
-    return m4;
-}
-
-struct mat2 mat2_identity()
-{
-    struct mat2 m2 = mat2_zero();
-    m2._11 = m2._22 = 1.0f;
-    return m2;
-}
-
-struct mat3 mat3_identity()
-{
-    struct mat3 m3 = mat3_zero();
-    m3._11 = m3._22 = m3._33 = 1.0f;
-    return m3;
-}
-
-struct mat4 mat4_identity()
-{
-    struct mat4 m4 = mat4_zero();
-    m4._11 = m4._22 = m4._33 = m4._44 = 1.0f;
-    return m4;
-}
-
-struct mat2 mat2_new(float _11, float _12,
-                     float _21, float _22)
-{
-    struct mat2 m2;
-    m2._11 = _11;
-    m2._12 = _12;
-    m2._21 = _21;
-    m2._22 = _22;
-    return m2;
-}
-
-struct mat3 mat3_new(float _11, float _12, float _13, 
-                     float _21, float _22, float _23, 
-                     float _31, float _32, float _33)
-{
-    struct mat3 m3;
-    m3._11 = _11;
-    m3._12 = _12;
-    m3._13 = _13;
-    m3._21 = _21;
-    m3._22 = _22;
-    m3._23 = _23;
-    m3._31 = _31;
-    m3._32 = _32;
-    m3._33 = _33;
-    return m3;
-}
-
-
-struct mat4 mat4_new(float _11, float _12, float _13, float _14,
-                     float _21, float _22, float _23, float _24,
-                     float _31, float _32, float _33, float _34,
-                     float _41, float _42, float _43, float _44)
-{
-    struct mat4 m4;
-    m4._11 = _11;
-    m4._12 = _12;
-    m4._13 = _13;
-    m4._14 = _14;
-    m4._21 = _21;
-    m4._22 = _22;
-    m4._23 = _23;
-    m4._24 = _24;
-    m4._31 = _31;
-    m4._32 = _32;
-    m4._33 = _33;
-    m4._34 = _34;
-    m4._41 = _41;
-    m4._42 = _42;
-    m4._43 = _43;
-    m4._44 = _44;
-    return m4;
-}
-
-struct mat2 mat2_add(const struct mat2 *a, const struct mat2 *b)
-{
-    struct mat2 m2;
-    for(int i = 0; i < 4; ++i)
-    {
-        m2.arr[i] = a->arr[i] + b->arr[i];
-    }
-    return m2;
-}
-
-struct mat3 mat3_add(const struct mat3 *a, const struct mat3 *b)
-{
-    struct mat3 m3;
-    for(int i = 0; i < 9; ++i)
-    {
-        m3.arr[i] = a->arr[i] + b->arr[i];
-    }
-    return m3;
-}
-
-struct mat4 mat4_add(const struct mat4 *a, const struct mat4 *b)
-{
-    struct mat4 m4;
-    for(int i = 0; i < 16; ++i)
-    {
-        m4.arr[i] = a->arr[i] + b->arr[i];
-    }
-    return m4;
-}
-
-
-struct mat2 mat2_sub(const struct mat2 *a, const struct mat2 *b)
-{
-    struct mat2 m2;
-    for(int i = 0; i < 4; ++i)
-    {
-        m2.arr[i] = a->arr[i] - b->arr[i];
-    }
-    return m2;
-}
-
-struct mat3 mat3_sub(const struct mat3 *a, const struct mat3 *b)
-{
-    struct mat3 m3;
-    for(int i = 0; i < 9; ++i)
-    {
-        m3.arr[i] = a->arr[i] - b->arr[i];
-    }
-    return m3;
-}
-
-struct mat4 mat4_sub(const struct mat4 *a, const struct mat4 *b)
-{
-    struct mat4 m4;
-    for(int i = 0; i < 16; ++i)
-    {
-        m4.arr[i] = a->arr[i] - b->arr[i];
-    }
-    return m4;
-}
-
-struct mat3 mat3_scale(const struct mat3 *a, float by)
-{
-    struct mat3 m3;
-    for(int i = 0; i < 9; ++i)
-    {
-        m3.arr[i] = a->arr[i] * by;
-    }
-    return m3;
-}
-
-struct mat3 mat3_mul(const struct mat3 *a, const struct mat3 *b)
-{
-    struct mat3 dest;
-    matrix_multiply(dest.arr, a->arr, 3, 3, b->arr, 3, 3); 
-    return dest;
-}
-
-
-struct mat3 mat3_transpose(const struct mat3 *m3)
-{
-    /*
-     * a b c    a d g
-     * d e f -> b e h
-     * g h i    c f i
-     * */
-    struct mat3 dest = mat3_zero();
-    matrix_transpose(dest.arr, (*m3).arr, 3, 3);
-    return dest;
-}
-
-struct mat3 mat3_rotate_x(float by)
-{
-    /* *
-     * 1   0   0
-     * 0   c  -s
-     * 0   s   c
-     * */
-    struct mat3 r = mat3_identity();
-    
-    r._22 = cosf(by);
-    r._23 = -sinf(by);
-    r._32 = sinf(by);
-    r._33 = cosf(by);
-    
-    return r;
-}
-
-struct mat3 mat3_rotate_y(float by)
-{
-    /* *
-     *  c  0  s
-     *  0  1  0
-     * -s  0  c
-     * */
-    struct mat3 r = mat3_identity();
-    
-    r._11 = cosf(by);
-    r._13 = sinf(by);
-    r._31 = -sinf(by);
-    r._33 = cosf(by);
-    
-    return r;
-}
-
-struct mat3 mat3_rotate_z(float by)
-{
-    /*
-     * c   -s   0
-     * s    c   0
-     * 0    0   1
-     * */
-    struct mat3 r = mat3_identity();
-    
-    r._11 = cosf(by);
-    r._12 = -sinf(by);
-    r._21 = sinf(0.0f);
-    r._22 = cosf(by);
-    
-    return r;
-}
-
-// TODO
-struct mat3 mat3_inv(const struct mat3 *m3)
-{
-    struct mat3 res;
-
-    float a = m3->_11;
-    float b = m3->_12;
-    float c = m3->_13;
-
-    float d = m3->_21;
-    float e = m3->_22;
-    float f = m3->_23;
-    
-    float g = m3->_31;
-    float h = m3->_32;
-    float i = m3->_33;
-
-    res._11 =   e * i - f * h;
-    res._12 = -(b * i - h * c);
-    res._13 =   b * f - e * c;
-    res._21 = -(d * i - g * f);
-    res._22 =   a * i - c * g;
-    res._23 = -(a * f - d * c);
-    res._31 =   d * h - g * e;
-    res._32 = -(a * h - g * b);
-    res._33 =   a * e - b * d;
-
-    return mat3_scale(&res, 1.0f / (a * res._11 + b * res._21 + c * res._31));
-}
-
 
 /* --- */
 
@@ -731,6 +369,18 @@ title(void)
     printf("===========================\n");
 }
 
+
+internal void
+check_matrix(void)
+{
+    struct mat4 m4 = mat4_new(1,  2, 3, 4,
+                              5,  6, 7, 8,
+                              9, 10,11,12,
+                              13,14,15,16);
+    struct mat4 m4_inv = mat4_inverse(&m4);
+    mat4_print(&m4_inv);
+}
+
 /* --- */
 
 /* CALLBACKS */
@@ -755,26 +405,8 @@ key_callback(GLFWwindow *window, int key, int scancode, int action, int modes)
 int main(void)
 {
     title();
-
-    struct vec3 a = vec3_new(10.0f, 10.0f, 10.0f);
-    struct vec3 b = vec3_new(10.0f, 10.0f, 10.0f);
-    struct vec3 c = vec3_add(&a, &b);
-    printf("X: %0.2f, Y: %0.2f, Z: %0.2f\n", c.x, c.y, c.z);
-
-
-    struct mat3 m1 = mat3_zero();
-    m1.arr[0] = 1.0f;
-    m1.arr[4] = 2.0f;
-    m1.arr[8] = 3.0f;
-
-    struct mat3 m2 = mat3_zero();
-    m2.arr[0] = 4.0f;
-    m2.arr[4] = 5.0f;
-    m2.arr[8] = 6.0f;
-
-    struct mat3 m3 = mat3_mul(&m1, &m2);
-    matrix_print(m3.arr, 3, 3);
-
+    
+    check_matrix();
 
     assert(restart_gl_log());
     gl_log("GLFW START: version %s\n", glfwGetVersionString());
