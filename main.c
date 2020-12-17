@@ -62,41 +62,6 @@ const char* NAME = "GLFW CMAKE";
 
 /* --- */
 
-/* GLOBALS */
-
-global_var GLfloat points[] = {
-//   x     y    z
-    -0.5, -0.5, 0.0, // px
-     0.5, -0.5, 0.0, // py
-     0.0,  0.5, 0.0  // pz
-};
-
-global_var GLfloat colour[] = {
-//  r     g     b
-    1.0f, 0.0f, 0.0f, // px
-    0.0f, 1.0f, 0.0f, // py 
-    0.0f, 0.0f, 1.0f  // pz
-};
-
-/*
-global_var const GLfloat points_colour[] = {
-//   x      y     z      r     g     b
-    -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f, // px
-     0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f, // py
-     0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f, // pz
-};
-*/
-
-// transform on x axis
-global_var GLfloat transform_4X4[] = {
-//  x     y     z     t
-    1.0f, 0.0f, 0.0f, 0.0f, // vx
-    0.0f, 1.0f, 0.0f, 0.0f, // vy
-    0.0f, 0.0f, 1.0f, 0.0f, // vz
-    0.5f, 0.0f, 0.0f, 1.0f  // transform 1
-};
-
-/* --- */
 
 /* *
  * clamp value between min and max values
@@ -370,17 +335,6 @@ title(void)
 }
 
 
-internal void
-check_matrix(void)
-{
-    struct mat4 m4 = mat4_new(1,  2, 3, 4,
-                              5,  6, 7, 8,
-                              9, 10,11,12,
-                              13,14,15,16);
-    struct mat4 m4_inv = mat4_inverse(&m4);
-    mat4_print(&m4_inv);
-}
-
 /* --- */
 
 /* CALLBACKS */
@@ -405,8 +359,6 @@ key_callback(GLFWwindow *window, int key, int scancode, int action, int modes)
 int main(void)
 {
     title();
-    
-    check_matrix();
 
     assert(restart_gl_log());
     gl_log("GLFW START: version %s\n", glfwGetVersionString());
@@ -448,19 +400,28 @@ int main(void)
     glad_glDepthFunc(GL_LESS);
 
     /* --- */
+
+    mat3 points = mat3_new(-0.5f, -0.5f, 0.0f, 
+                            0.5f, -0.5f, 0.0f,
+                            0.0f,  0.5f, 0.0f);
+
+    mat3 colour = mat3_new(0.5f, 0.0f, 0.0f,
+                           0.0f, 0.5f, 0.0f,
+                           0.0f, 0.0f, 1.0f);
+    /* --- */
     
     // VBO (vertex buffer object) array of data
     //  position
     GLuint points_vbo = 0;
     glad_glGenBuffers(1, &points_vbo);
     glad_glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
-    glad_glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
+    glad_glBufferData(GL_ARRAY_BUFFER, sizeof(points), points.arr, GL_STATIC_DRAW);
 
     //  colour
     GLuint colour_vbo = 0;
     glad_glGenBuffers(1, &colour_vbo);
     glad_glBindBuffer(GL_ARRAY_BUFFER, colour_vbo);
-    glad_glBufferData(GL_ARRAY_BUFFER, sizeof(colour), colour, GL_STATIC_DRAW);
+    glad_glBufferData(GL_ARRAY_BUFFER, sizeof(colour), colour.arr, GL_STATIC_DRAW);
     
     // VAO
     GLuint vao = 0;
@@ -487,10 +448,6 @@ int main(void)
 
     /* --- */
 
-    // speed
-    // double speed = 0.2;
-    // double last_pos = 0.0;
-
     // fps
     double previous = glfwGetTime();
     int counter = 0;
@@ -512,21 +469,12 @@ int main(void)
         }
         ++counter;
 
-        // move by updating transform matrix
-        // speed = fabs(last_pos) > 1.0 ? -speed : speed;
-        // transform_4X4[12] = elapsed * speed + last_pos;
-        // last_pos = transform_4X4[12];
-
-
         glad_glClearColor(0.1, 0.1, 0.1, 1.0);
         glad_glUseProgram(program);
         glad_glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glad_glViewport(0, 0, WIDTH, HEIGHT);
 
         /* DRAW */
-        
-        // int transform_local = glad_glGetUniformLocation(program, "transform");
-        // glad_glUniformMatrix4fv(transform_local, 1, GL_FALSE, transform_4X4);
         
         glad_glBindVertexArray(vao);
         glad_glDrawArrays(GL_TRIANGLES, 0, 3);

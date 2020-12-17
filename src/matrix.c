@@ -4,9 +4,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <math.h>
-#include <assert.h>
 
 #include "matrix.h"
+
+#define LOOP_MATRIX 0
 
 static bool
 matrix_multiply(float *out, const float *arrA, int colA, int rowA, const float *arrB, int rowB, int colB)
@@ -65,128 +66,143 @@ matrix_print(const float *arr, int row, int col)
 
 /* MAT 2 */
 
-struct mat2
-mat2_zero(){
-    struct mat2 m2 = (struct mat2){
+mat2 mat2_zero(){
+    mat2 m2 = (mat2){
         ._11 = 0.0f, ._12 = 0.0f,
         ._21 = 0.0f, ._22 = 0.0f
     };
     return m2;
 }
 
-struct mat2
-mat2_identity(){
-    struct mat2 m2 = (struct mat2){
+mat2 mat2_identity(){
+    mat2 m2 = (mat2){
         ._11 = 1.0f, ._12 = 0.0f,
         ._21 = 0.0f, ._22 = 1.0f
     };
     return m2;
 }
 
-struct mat2
-mat2_new(float _11, float _12,
-         float _21, float _22)
+mat2 mat2_new(float _11, float _12,
+              float _21, float _22)
 {
-    struct mat2 m2 = (struct mat2){
+    mat2 m2 = (mat2){
         ._11 = _11, ._12 = _12,
         ._21 = _21, ._22 = _22
     };
     return m2;
 }
 
-struct mat2
-mat2_add(const struct mat2 *a, const struct mat2 *b)
+void
+mat2_add(mat2 *dest, const mat2 *a, const mat2 *b)
 {
-    struct mat2 m2;
     for(int i = 0; i < 4; ++i)
     {
-        m2.arr[i] = a->arr[i] + b->arr[i];
+        dest->arr[i] = a->arr[i] + b->arr[i];
     }
-    return m2;
 }
 
-struct mat2
-mat2_sub(const struct mat2 *a, const struct mat2 *b)
+void
+mat2_sub(mat2 *dest, const mat2 *a, const mat2 *b)
 {
-    struct mat2 m2;
     for(int i = 0; i < 4; ++i)
     {
-        m2.arr[i] = a->arr[i] - b->arr[i];
+        dest->arr[i] = a->arr[i] - b->arr[i];
     }
-    return m2;
 }
 
-struct mat2
-mat2_scale(const struct mat2 *a, float by)
+void
+mat2_scale(mat2 *dest, const mat2 *m2, float by)
 {
-    struct mat2 m2;
     for(int i = 0; i < 4; ++i)
     {
-        m2.arr[i] = a->arr[i] * by;
+        dest->arr[i] = m2->arr[i] * by;
     }
-    return m2;
 }
 
-struct mat2
-mat2_mul(const struct mat2 *a, const struct mat2 *b)
+void
+mat2_mul(mat2 *dest, const mat2 *a, const mat2 *b)
 {
-    struct mat2 dest;
+#if MATRIX_LOOP
+
     bool check = matrix_multiply(dest.arr, a->arr, 2, 2, b->arr, 2, 2);
     assert(check != false);
-    return dest;
+
+#else
+
+    dest->_11 = a->_11 * b->_11 + a->_12 * b->_21;
+    dest->_12 = a->_11 * b->_12 + a->_12 * b->_22;
+
+    dest->_21 = a->_21 * b->_11 + a->_22 * b->_21;
+    dest->_22 = a->_21 * b->_12 + a->_22 * b->_22;
+
+#endif
 }
 
-struct mat2
-mat2_transpose(const struct mat2 *m2)
+void
+mat2_transpose(mat2 *dest, const mat2 *m2)
 {
     /* *
-     * a b -> a c
-     * c d    b d
+     * 11 12 -> 11 21
+     * 21 22    12 22
      * */
-    struct mat2 dest;
-    matrix_transpose(dest.arr, m2->arr, 2, 2);
-    return dest;
+#if LOOP_MATRIX
+
+    matrix_transpose(dest->arr, m2->arr, 2, 2);
+
+#else
+
+    dest->_11 = m2->_11;
+    dest->_12 = m2->_21;
+    dest->_21 = m2->_12;
+    dest->_22 = m2->_22;
+
+#endif
 }
 
-struct mat2
-mat2_cofactor(const struct mat2 *m2)
+void
+mat2_cofactor(mat2 *dest, const mat2 *m2)
 {
-    return mat2_new(m2->_11, -m2->_12, 
-                    -m2->_21, m2->_22);
+    dest->_11 =  m2->_11;
+    dest->_12 = -m2->_12;
+    dest->_21 = -m2->_21;
+    dest->_22 =  m2->_22;
 }
 
 float
-mat2_determinant(const struct mat2 *m2)
+mat2_determinant(const mat2 *m2)
 {
     return (m2->_11 * m2->_22) - (m2->_12 * m2->_21);
 }
 
-struct mat2
-mat2_inverse(const struct mat2 *m2)
+int
+mat2_inverse(mat2 *dest, const mat2 *m2)
 {
-    float det = 1.0f / mat2_determinant(m2);
-    assert(det != 0.0f);
+    float m2_det = mat2_determinant(m2);
+    if(m2_det == 0.0f)
+    {
+        return 0;
+    }
+    float det = 1.0f / m2_det;
 
-    float a =  (m2->_22) * det; 
-    float b = -(m2->_12) * det;
-    float c = -(m2->_21) * det;
-    float d =  (m2->_11) * det;
-    
-    return mat2_new(a, b, 
-                    c, d);
+    dest->_11 =  (m2->_22) * det;
+    dest->_12 = -(m2->_12) * det;
+    dest->_21 = -(m2->_21) * det;
+    dest->_22 =  (m2->_11) * det;
+
+    return 1;
 }
 
 void
-mat2_print(const struct mat2 *m2)
+mat2_print(const mat2 *m2)
 {
     matrix_print(m2->arr, 2, 2);
 }
 
 /* MAT 3 */
 
-struct mat3
+mat3
 mat3_zero(){
-    struct mat3 m3 = (struct mat3){
+    mat3 m3 = (mat3){
         ._11 = 0.0f, ._12 = 0.0f, ._13 = 0.0f,
         ._21 = 0.0f, ._22 = 0.0f, ._23 = 0.0f,
         ._31 = 0.0f, ._32 = 0.0f, ._33 = 0.0f
@@ -194,9 +210,9 @@ mat3_zero(){
     return m3;
 }
 
-struct mat3
+mat3
 mat3_identity(){
-    struct mat3 m3 = (struct mat3){
+    mat3 m3 = (mat3){
         ._11 = 1.0f, ._12 = 0.0f, ._13 = 0.0f,
         ._21 = 0.0f, ._22 = 1.0f, ._23 = 0.0f,
         ._31 = 0.0f, ._32 = 0.0f, ._33 = 1.0f
@@ -204,12 +220,12 @@ mat3_identity(){
     return m3;
 }
 
-struct mat3
+mat3
 mat3_new(float _11, float _12, float _13,
          float _21, float _22, float _23,
          float _31, float _32, float _33)
 {
-    struct mat3 m3 = (struct mat3){
+    mat3 m3 = (mat3){
         ._11 = _11, ._12 = _12, ._13 = _13,
         ._21 = _21, ._22 = _22, ._23 = _23,
         ._31 = _31, ._32 = _32, ._33 = _33
@@ -217,67 +233,99 @@ mat3_new(float _11, float _12, float _13,
     return m3;
 }
 
-struct mat3
-mat3_add(const struct mat3 *a, const struct mat3 *b)
+void
+mat3_add(mat3 *dest, const mat3 *a, const mat3 *b)
 {
-    struct mat3 m3;
     for(int i = 0; i < 9; ++i)
     {
-        m3.arr[i] = a->arr[i] + b->arr[i];
+        dest->arr[i] = a->arr[i] + b->arr[i];
     }
-    return m3;
 }
 
-struct mat3
-mat3_sub(const struct mat3 *a, const struct mat3 *b)
+void
+mat3_sub(mat3 *dest, const mat3 *a, const mat3 *b)
 {
-    struct mat3 m3;
     for(int i = 0; i < 9; ++i)
     {
-        m3.arr[i] = a->arr[i] - b->arr[i];
+        dest->arr[i] = a->arr[i] - b->arr[i];
     }
-    return m3;
 }
 
-struct mat3
-mat3_scale(const struct mat3 *a, float by)
+void
+mat3_scale(mat3 *dest, const mat3 *m3, float by)
 {
-    struct mat3 m3;
     for(int i = 0; i < 9; ++i)
     {
-        m3.arr[i] = a->arr[i] * by;
+        dest->arr[i] = m3->arr[i] * by;
     }
-    return m3;
 }
 
-struct mat3
-mat3_mul(const struct mat3 *a, const struct mat3 *b)
+void
+mat3_mul(mat3 *dest, const mat3 *a, const mat3 *b)
 {
-    struct mat3 dest;
-    bool check = matrix_multiply(dest.arr, a->arr, 3, 3, b->arr, 3, 3);
+#if LOOP_MATRIX
+
+    bool check = matrix_multiply(dest->arr, a->arr, 3, 3, b->arr, 3, 3);
     assert(check != false);
-    return dest;
+
+#else
+
+    dest->_11 = a->_11 * b->_11 + a->_12 * b->_21 + a->_13 * b->_31;
+    dest->_12 = a->_11 * b->_12 + a->_12 * b->_22 + a->_13 * b->_32;
+    dest->_13 = a->_11 * b->_13 + a->_12 * b->_23 + a->_13 * b->_33;
+
+    dest->_21 = a->_21 * b->_11 + a->_22 * b->_21 + a->_23 * b->_31;
+    dest->_22 = a->_21 * b->_12 + a->_22 * b->_22 + a->_23 * b->_32;
+    dest->_23 = a->_21 * b->_13 + a->_22 * b->_23 + a->_23 * b->_33;
+
+    dest->_31 = a->_31 * b->_11 + a->_32 * b->_21 + a->_33 * b->_31;
+    dest->_32 = a->_31 * b->_12 + a->_32 * b->_22 + a->_33 * b->_32;
+    dest->_33 = a->_31 * b->_13 + a->_32 * b->_23 + a->_33 * b->_33;
+
+#endif
 }
 
-struct mat3
-mat3_transpose(const struct mat3 *m3)
+void
+mat3_transpose(mat3 *dest, const struct mat3 *m3)
 {
     /* *
-     * a b c    a d g
-     * d e f -> b e h
-     * g h i    c f i
+     * 11 12 13    11 21 31
+     * 21 22 23 -> 12 22 32
+     * 31 32 33    13 23 33
      * */
-    struct mat3 dest;
-    matrix_transpose(dest.arr, m3->arr, 3, 3);
-    return dest;
+#if LOOP_MATRIX
+
+    matrix_transpose(dest->arr, m3->arr, 3, 3);
+
+#else
+
+    dest->_11 = m3->_11;
+    dest->_12 = m3->_21;
+    dest->_13 = m3->_31;
+
+    dest->_21 = m3->_12;
+    dest->_22 = m3->_22;
+    dest->_23 = m3->_32;
+
+    dest->_31 = m3->_13;
+    dest->_32 = m3->_23;
+    dest->_33 = m3->_33;
+
+#endif
 }
 
-struct mat3
-mat3_cofactor(const struct mat3 *m3)
+void
+mat3_cofactor(mat3 *dest, const struct mat3 *m3)
 {
-    return mat3_new( m3->_11, -m3->_12,  m3->_13,
-                    -m3->_21,  m3->_22, -m3->_23,
-                     m3->_31, -m3->_32,  m3->_33);
+    dest->_11 =  m3->_11;
+    dest->_12 = -m3->_12;
+    dest->_13 =  m3->_13;
+    dest->_21 = -m3->_21;
+    dest->_22 =  m3->_22;
+    dest->_23 = -m3->_23;
+    dest->_31 =  m3->_31;
+    dest->_32 = -m3->_32;
+    dest->_33 =  m3->_33;
 }
 
 float mat3_determinant(const struct mat3 *m3)
@@ -288,40 +336,41 @@ float mat3_determinant(const struct mat3 *m3)
     return a + b + c;
 }
 
-struct mat3
-mat3_inverse(const struct mat3 *m3)
-{   
-    float det = 1.0f / mat3_determinant(m3);
-    assert(det != 0.0f);
+int
+mat3_inverse(mat3 *dest, const mat3 *m3)
+{
+    float m3_det =  mat3_determinant(m3);
+    if(m3_det == 0.0f)
+    {
+        return 0;
+    }
+    float det = 1.0f / m3_det;
 
-    float a =  (m3->_22 * m3->_33 - m3->_23 * m3->_32) * det;
-    float b = -(m3->_12 * m3->_33 - m3->_32 * m3->_13) * det;
-    float c =  (m3->_12 * m3->_23 - m3->_22 * m3->_13) * det;
+    dest->_11 =  (m3->_22 * m3->_33 - m3->_23 * m3->_32) * det;
+    dest->_12 = -(m3->_12 * m3->_33 - m3->_32 * m3->_13) * det;
+    dest->_13 =  (m3->_12 * m3->_23 - m3->_22 * m3->_13) * det;
 
-    float d = -(m3->_21 * m3->_33 - m3->_31 * m3->_23) * det;
-    float e =  (m3->_11 * m3->_33 - m3->_13 * m3->_31) * det;
-    float f = -(m3->_11 * m3->_23 - m3->_21 * m3->_13) * det;
+    dest->_21 = -(m3->_21 * m3->_33 - m3->_31 * m3->_23) * det;
+    dest->_22 =  (m3->_11 * m3->_33 - m3->_13 * m3->_31) * det;
+    dest->_23 = -(m3->_11 * m3->_23 - m3->_21 * m3->_13) * det;
 
-    float g =  (m3->_21 * m3->_32 - m3->_31 * m3->_22) * det;
-    float h = -(m3->_11 * m3->_32 - m3->_31 * m3->_12) * det;
-    float i =  (m3->_11 * m3->_22 - m3->_12 * m3->_21) * det;
-
-    return mat3_new(a, b, c, 
-                    d, e, f, 
-                    g, h, i);
+    dest->_31 =  (m3->_21 * m3->_32 - m3->_31 * m3->_22) * det;
+    dest->_32 = -(m3->_11 * m3->_32 - m3->_31 * m3->_12) * det;
+    dest->_33 =  (m3->_11 * m3->_22 - m3->_12 * m3->_21) * det;
+    
+    return 1;
 }
 
 void
-mat3_print(const struct mat3 *m3)
+mat3_print(const mat3 *m3)
 {
     matrix_print(m3->arr, 3, 3);
 }
 
 /* MAT 4 */
 
-struct mat4
-mat4_zero(){
-    struct mat4 m4 = (struct mat4){
+mat4 mat4_zero(){
+    mat4 m4 = (mat4){
         ._11 = 0.0f, ._12 = 0.0f, ._13 = 0.0f, ._14 = 0.0f,
         ._21 = 0.0f, ._22 = 0.0f, ._23 = 0.0f, ._24 = 0.0f,
         ._31 = 0.0f, ._32 = 0.0f, ._33 = 0.0f, ._34 = 0.0f,
@@ -330,9 +379,8 @@ mat4_zero(){
     return m4;
 }
 
-struct mat4
-mat4_identity(){
-    struct mat4 m4 = (struct mat4){
+mat4 mat4_identity(){
+    mat4 m4 = (mat4){
         ._11 = 1.0f, ._12 = 0.0f, ._13 = 0.0f, ._14 = 0.0f,
         ._21 = 0.0f, ._22 = 1.0f, ._23 = 0.0f, ._24 = 0.0f,
         ._31 = 0.0f, ._32 = 0.0f, ._33 = 1.0f, ._34 = 0.0f,
@@ -341,13 +389,12 @@ mat4_identity(){
     return m4;
 }
 
-struct mat4
-mat4_new(float _11, float _12, float _13, float _14,
-         float _21, float _22, float _23, float _24,
-         float _31, float _32, float _33, float _34,
-         float _41, float _42, float _43, float _44)
+mat4 mat4_new(float _11, float _12, float _13, float _14,
+              float _21, float _22, float _23, float _24,
+              float _31, float _32, float _33, float _34,
+              float _41, float _42, float _43, float _44)
 {
-    struct mat4 m4 = (struct mat4){
+    mat4 m4 = (mat4){
         ._11 = _11, ._12 = _12, ._13 = _13, ._14 = _14,
         ._21 = _21, ._22 = _22, ._23 = _23, ._24 = _24,
         ._31 = _31, ._32 = _32, ._33 = _33, ._34 = _34,
@@ -356,73 +403,131 @@ mat4_new(float _11, float _12, float _13, float _14,
     return m4;
 }
 
-struct mat4
-mat4_add(const struct mat4 *a, const struct mat4 *b)
+void
+mat4_add(mat4 *dest, const mat4 *a, const mat4 *b)
 {
-    struct mat4 m4 = mat4_zero();
     for(int i = 0; i < 16; ++i)
     {
-        m4.arr[i] = a->arr[i] + b->arr[i];
+        dest->arr[i] = a->arr[i] + b->arr[i];
     }
-    return m4;
 }
 
-struct mat4
-mat4_sub(const struct mat4 *a, const struct mat4 *b)
+void
+mat4_sub(mat4 *dest, const mat4 *a, const mat4 *b)
 {
-    struct mat4 m4 = mat4_zero();
     for(int i = 0; i < 16; ++i)
     {
-        m4.arr[i] = a->arr[i] - b->arr[i];
+        dest->arr[i] = a->arr[i] - b->arr[i];
     }
-    return m4;
 }
 
-struct mat4
-mat4_scale(const struct mat4 *a, float by)
+void
+mat4_scale(mat4 *dest, const mat4 *a, float by)
 {
-    struct mat4 m4 = mat4_zero();
     for(int i = 0; i < 16; ++i)
     {
-        m4.arr[i] = a->arr[i] * by;
+        dest->arr[i] = a->arr[i] * by;
     }
-    return m4;
 }
 
-struct mat4
-mat4_mul(const struct mat4 *a, const struct mat4 *b)
+void
+mat4_mul(mat4 *dest, const mat4 *a, const mat4 *b)
 {
-    struct mat4 dest = mat4_zero();
-    bool check = matrix_multiply(dest.arr, a->arr, 4, 4, b->arr, 4, 4);
+#if LOOP_MATRIX
+
+    bool check = matrix_multiply(dest->arr, a->arr, 4, 4, b->arr, 4, 4);
     assert(check != false);
-    return dest;
+
+#else
+
+    dest->_11 = a->_11 * b->_11 + a->_12 * b->_21 + a->_13 * b->_31 + a->_14 * b->_41;
+    dest->_12 = a->_11 * b->_12 + a->_12 * b->_22 + a->_13 * b->_32 + a->_14 * b->_42;
+    dest->_13 = a->_11 * b->_13 + a->_12 * b->_23 + a->_13 * b->_33 + a->_14 * b->_43;
+    dest->_14 = a->_11 * b->_14 + a->_12 * b->_24 + a->_13 * b->_34 + a->_14 * b->_44;
+
+    dest->_21 = a->_21 * b->_11 + a->_22 * b->_21 + a->_23 * b->_31 + a->_24 * b->_41;
+    dest->_22 = a->_21 * b->_12 + a->_22 * b->_22 + a->_23 * b->_32 + a->_24 * b->_42;
+    dest->_23 = a->_21 * b->_13 + a->_22 * b->_23 + a->_23 * b->_33 + a->_24 * b->_43;
+    dest->_24 = a->_21 * b->_14 + a->_22 * b->_24 + a->_23 * b->_34 + a->_24 * b->_44;
+
+    dest->_31 = a->_31 * b->_11 + a->_32 * b->_21 + a->_33 * b->_31 + a->_34 * b->_41;
+    dest->_32 = a->_31 * b->_12 + a->_32 * b->_22 + a->_33 * b->_32 + a->_34 * b->_42;
+    dest->_33 = a->_31 * b->_13 + a->_32 * b->_23 + a->_33 * b->_33 + a->_34 * b->_43;
+    dest->_34 = a->_31 * b->_14 + a->_32 * b->_24 + a->_33 * b->_34 + a->_34 * b->_44;
+
+    dest->_41 = a->_41 * b->_11 + a->_42 * b->_21 + a->_43 * b->_31 + a->_44 * b->_41;
+    dest->_42 = a->_41 * b->_12 + a->_42 * b->_22 + a->_43 * b->_32 + a->_44 * b->_42;
+    dest->_43 = a->_41 * b->_13 + a->_42 * b->_23 + a->_43 * b->_33 + a->_44 * b->_43;
+    dest->_44 = a->_41 * b->_14 + a->_42 * b->_24 + a->_43 * b->_34 + a->_44 * b->_44;
+
+#endif
 }
 
-struct mat4
-mat4_transpose(const struct mat4 *m4)
+void
+mat4_transpose(mat4 *dest, const mat4 *m4)
 {
     /* *
-     * a b c d    a e i m
-     * e f g h -> b f j n
-     * i j k l    c g k o
-     * m n o p    d h l p
+     * 11 12 13 14    11 21 31 41
+     * 21 22 23 24 -> 12 22 32 42
+     * 31 32 33 34    13 23 33 43
+     * 41 42 43 44    14 24 34 44
      * */
-    struct mat4 dest = mat4_zero();
+
+#if MATRIX_LOOP
+
     matrix_transpose(dest.arr, m4->arr, 4, 4);
-    return dest;
+
+#else
+
+    dest->_11 = m4->_11;
+    dest->_12 = m4->_21;
+    dest->_13 = m4->_31;
+    dest->_14 = m4->_41;
+
+    dest->_21 = m4->_12;
+    dest->_22 = m4->_22;
+    dest->_23 = m4->_32;
+    dest->_24 = m4->_42;
+
+    dest->_31 = m4->_13;
+    dest->_32 = m4->_23;
+    dest->_33 = m4->_33;
+    dest->_34 = m4->_34;
+
+    dest->_41 = m4->_14;
+    dest->_42 = m4->_24;
+    dest->_43 = m4->_34;
+    dest->_44 = m4->_44;
+
+#endif
 }
 
-struct mat4
-mat4_cofactor(const struct mat4 *m4)
+void
+mat4_cofactor(mat4 *dest, const mat4 *m4)
 {
-    return mat4_new( m4->_11, -m4->_12,  m4->_13, -m4->_14,
-                    -m4->_21,  m4->_22, -m4->_23,  m4->_24,
-                     m4->_31, -m4->_32,  m4->_33, -m4->_34,
-                    -m4->_41,  m4->_42, -m4->_43,  m4->_44);
+    dest->_11 =  m4->_11;
+    dest->_12 = -m4->_12;
+    dest->_13 =  m4->_13;
+    dest->_14 = -m4->_14;
+
+    dest->_21 = -m4->_21;
+    dest->_22 =  m4->_22;
+    dest->_23 = -m4->_23;
+    dest->_24 =  m4->_24;
+
+    dest->_31 =  m4->_31;
+    dest->_32 = -m4->_32;
+    dest->_33 =  m4->_33;
+    dest->_34 = -m4->_34;
+
+    dest->_41 = -m4->_41;
+    dest->_42 =  m4->_42;
+    dest->_43 = -m4->_43;
+    dest->_44 =  m4->_44;
 }
 
 float
-mat4_determinant(const struct mat4 *m4)
+mat4_determinant(const mat4 *m4)
 {
     float a = m4->_11 * (m4->_22 * (m4->_33 * m4->_44 - m4->_34 * m4->_43) + -m4->_23 * (m4->_32 * m4->_44 - m4->_34 * m4->_42) + m4->_24 * (m4->_32 * m4->_43 - m4->_33 * m4->_42));
     float b = -m4->_12 * (m4->_21 * (m4->_33 * m4->_44 - m4->_34 * m4->_43) + -m4->_23 * (m4->_31 * m4->_44 - m4->_34 * m4->_41) + m4->_24 * (m4->_31 * m4->_43 - m4->_33 * m4->_41));
@@ -431,37 +536,38 @@ mat4_determinant(const struct mat4 *m4)
     return a + b + c + d;
 }
 
-struct mat4
-mat4_inverse(const struct mat4 *m4)
+int
+mat4_inverse(mat4 *dest, const mat4 *m4)
 {
-    float det = 1.0f / mat4_determinant(m4);
-    assert(det != 0.0f);
+    float m4_det = mat4_determinant(m4);
+    if(m4_det == 0.0f)
+    {
+        return 0;
+    }
+    float det = 1.0f / m4_det;
 
-	float a = (m4->_22 * m4->_33 * m4->_44 + m4->_23 * m4->_34 * m4->_42 + m4->_24 * m4->_32 * m4->_43 - m4->_22 * m4->_34 * m4->_43 - m4->_23 * m4->_32 * m4->_44 - m4->_24 * m4->_33 * m4->_42) * det;
-	float b = (m4->_12 * m4->_34 * m4->_43 + m4->_13 * m4->_32 * m4->_44 + m4->_14 * m4->_33 * m4->_42 - m4->_12 * m4->_33 * m4->_44 - m4->_13 * m4->_34 * m4->_42 - m4->_14 * m4->_32 * m4->_43) * det;
-	float c = (m4->_12 * m4->_23 * m4->_44 + m4->_13 * m4->_24 * m4->_42 + m4->_14 * m4->_22 * m4->_43 - m4->_12 * m4->_24 * m4->_43 - m4->_13 * m4->_22 * m4->_44 - m4->_14 * m4->_23 * m4->_42) * det;
-	float d = (m4->_12 * m4->_24 * m4->_33 + m4->_13 * m4->_22 * m4->_34 + m4->_14 * m4->_23 * m4->_32 - m4->_12 * m4->_23 * m4->_34 - m4->_13 * m4->_24 * m4->_32 - m4->_14 * m4->_22 * m4->_33) * det;
-	float e = (m4->_21 * m4->_34 * m4->_43 + m4->_23 * m4->_31 * m4->_44 + m4->_24 * m4->_33 * m4->_41 - m4->_21 * m4->_33 * m4->_44 - m4->_23 * m4->_34 * m4->_41 - m4->_24 * m4->_31 * m4->_43) * det;
-	float f = (m4->_11 * m4->_33 * m4->_44 + m4->_13 * m4->_34 * m4->_41 + m4->_14 * m4->_31 * m4->_43 - m4->_11 * m4->_34 * m4->_43 - m4->_13 * m4->_31 * m4->_44 - m4->_14 * m4->_33 * m4->_41) * det;
-	float g = (m4->_11 * m4->_24 * m4->_43 + m4->_13 * m4->_21 * m4->_44 + m4->_14 * m4->_23 * m4->_41 - m4->_11 * m4->_23 * m4->_44 - m4->_13 * m4->_24 * m4->_41 - m4->_14 * m4->_21 * m4->_43) * det;
-	float h = (m4->_11 * m4->_23 * m4->_34 + m4->_13 * m4->_24 * m4->_31 + m4->_14 * m4->_21 * m4->_33 - m4->_11 * m4->_24 * m4->_33 - m4->_13 * m4->_21 * m4->_34 - m4->_14 * m4->_23 * m4->_31) * det;
-	float i = (m4->_21 * m4->_32 * m4->_44 + m4->_22 * m4->_34 * m4->_41 + m4->_24 * m4->_31 * m4->_42 - m4->_21 * m4->_34 * m4->_42 - m4->_22 * m4->_31 * m4->_44 - m4->_24 * m4->_32 * m4->_41) * det;
-	float j = (m4->_11 * m4->_34 * m4->_42 + m4->_12 * m4->_31 * m4->_44 + m4->_14 * m4->_32 * m4->_41 - m4->_11 * m4->_32 * m4->_44 - m4->_12 * m4->_34 * m4->_41 - m4->_14 * m4->_31 * m4->_42) * det;
-	float k = (m4->_11 * m4->_22 * m4->_44 + m4->_12 * m4->_24 * m4->_41 + m4->_14 * m4->_21 * m4->_42 - m4->_11 * m4->_24 * m4->_42 - m4->_12 * m4->_21 * m4->_44 - m4->_14 * m4->_22 * m4->_41) * det;
-	float l = (m4->_11 * m4->_24 * m4->_32 + m4->_12 * m4->_21 * m4->_34 + m4->_14 * m4->_22 * m4->_31 - m4->_11 * m4->_22 * m4->_34 - m4->_12 * m4->_24 * m4->_31 - m4->_14 * m4->_21 * m4->_32) * det;
-	float m = (m4->_21 * m4->_33 * m4->_42 + m4->_22 * m4->_31 * m4->_43 + m4->_23 * m4->_32 * m4->_41 - m4->_21 * m4->_32 * m4->_43 - m4->_22 * m4->_33 * m4->_41 - m4->_23 * m4->_31 * m4->_42) * det;
-    float n = (m4->_11 * m4->_32 * m4->_43 + m4->_12 * m4->_33 * m4->_41 + m4->_13 * m4->_31 * m4->_42 - m4->_11 * m4->_33 * m4->_42 - m4->_12 * m4->_31 * m4->_43 - m4->_13 * m4->_32 * m4->_41) * det;
-	float o = (m4->_11 * m4->_23 * m4->_42 + m4->_12 * m4->_21 * m4->_43 + m4->_13 * m4->_22 * m4->_41 - m4->_11 * m4->_22 * m4->_43 - m4->_12 * m4->_23 * m4->_41 - m4->_13 * m4->_21 * m4->_42) * det;
-	float p = (m4->_11 * m4->_22 * m4->_33 + m4->_12 * m4->_23 * m4->_31 + m4->_13 * m4->_21 * m4->_32 - m4->_11 * m4->_23 * m4->_32 - m4->_12 * m4->_21 * m4->_33 - m4->_13 * m4->_22 * m4->_31) * det;
+	dest->_11 = (m4->_22 * m4->_33 * m4->_44 + m4->_23 * m4->_34 * m4->_42 + m4->_24 * m4->_32 * m4->_43 - m4->_22 * m4->_34 * m4->_43 - m4->_23 * m4->_32 * m4->_44 - m4->_24 * m4->_33 * m4->_42) * det;
+	dest->_12 = (m4->_12 * m4->_34 * m4->_43 + m4->_13 * m4->_32 * m4->_44 + m4->_14 * m4->_33 * m4->_42 - m4->_12 * m4->_33 * m4->_44 - m4->_13 * m4->_34 * m4->_42 - m4->_14 * m4->_32 * m4->_43) * det;
+	dest->_13 = (m4->_12 * m4->_23 * m4->_44 + m4->_13 * m4->_24 * m4->_42 + m4->_14 * m4->_22 * m4->_43 - m4->_12 * m4->_24 * m4->_43 - m4->_13 * m4->_22 * m4->_44 - m4->_14 * m4->_23 * m4->_42) * det;
+	dest->_14 = (m4->_12 * m4->_24 * m4->_33 + m4->_13 * m4->_22 * m4->_34 + m4->_14 * m4->_23 * m4->_32 - m4->_12 * m4->_23 * m4->_34 - m4->_13 * m4->_24 * m4->_32 - m4->_14 * m4->_22 * m4->_33) * det;
+    dest->_21 = (m4->_21 * m4->_34 * m4->_43 + m4->_23 * m4->_31 * m4->_44 + m4->_24 * m4->_33 * m4->_41 - m4->_21 * m4->_33 * m4->_44 - m4->_23 * m4->_34 * m4->_41 - m4->_24 * m4->_31 * m4->_43) * det;
+	dest->_22 = (m4->_11 * m4->_33 * m4->_44 + m4->_13 * m4->_34 * m4->_41 + m4->_14 * m4->_31 * m4->_43 - m4->_11 * m4->_34 * m4->_43 - m4->_13 * m4->_31 * m4->_44 - m4->_14 * m4->_33 * m4->_41) * det;
+	dest->_23 = (m4->_11 * m4->_24 * m4->_43 + m4->_13 * m4->_21 * m4->_44 + m4->_14 * m4->_23 * m4->_41 - m4->_11 * m4->_23 * m4->_44 - m4->_13 * m4->_24 * m4->_41 - m4->_14 * m4->_21 * m4->_43) * det;
+	dest->_24 = (m4->_11 * m4->_23 * m4->_34 + m4->_13 * m4->_24 * m4->_31 + m4->_14 * m4->_21 * m4->_33 - m4->_11 * m4->_24 * m4->_33 - m4->_13 * m4->_21 * m4->_34 - m4->_14 * m4->_23 * m4->_31) * det;
+    dest->_31 = (m4->_21 * m4->_32 * m4->_44 + m4->_22 * m4->_34 * m4->_41 + m4->_24 * m4->_31 * m4->_42 - m4->_21 * m4->_34 * m4->_42 - m4->_22 * m4->_31 * m4->_44 - m4->_24 * m4->_32 * m4->_41) * det;
+	dest->_32 = (m4->_11 * m4->_34 * m4->_42 + m4->_12 * m4->_31 * m4->_44 + m4->_14 * m4->_32 * m4->_41 - m4->_11 * m4->_32 * m4->_44 - m4->_12 * m4->_34 * m4->_41 - m4->_14 * m4->_31 * m4->_42) * det;
+	dest->_33 = (m4->_11 * m4->_22 * m4->_44 + m4->_12 * m4->_24 * m4->_41 + m4->_14 * m4->_21 * m4->_42 - m4->_11 * m4->_24 * m4->_42 - m4->_12 * m4->_21 * m4->_44 - m4->_14 * m4->_22 * m4->_41) * det;
+	dest->_34 = (m4->_11 * m4->_24 * m4->_32 + m4->_12 * m4->_21 * m4->_34 + m4->_14 * m4->_22 * m4->_31 - m4->_11 * m4->_22 * m4->_34 - m4->_12 * m4->_24 * m4->_31 - m4->_14 * m4->_21 * m4->_32) * det;
+    dest->_41 = (m4->_21 * m4->_33 * m4->_42 + m4->_22 * m4->_31 * m4->_43 + m4->_23 * m4->_32 * m4->_41 - m4->_21 * m4->_32 * m4->_43 - m4->_22 * m4->_33 * m4->_41 - m4->_23 * m4->_31 * m4->_42) * det;
+    dest->_42 = (m4->_11 * m4->_32 * m4->_43 + m4->_12 * m4->_33 * m4->_41 + m4->_13 * m4->_31 * m4->_42 - m4->_11 * m4->_33 * m4->_42 - m4->_12 * m4->_31 * m4->_43 - m4->_13 * m4->_32 * m4->_41) * det;
+	dest->_43 = (m4->_11 * m4->_23 * m4->_42 + m4->_12 * m4->_21 * m4->_43 + m4->_13 * m4->_22 * m4->_41 - m4->_11 * m4->_22 * m4->_43 - m4->_12 * m4->_23 * m4->_41 - m4->_13 * m4->_21 * m4->_42) * det;
+	dest->_44 = (m4->_11 * m4->_22 * m4->_33 + m4->_12 * m4->_23 * m4->_31 + m4->_13 * m4->_21 * m4->_32 - m4->_11 * m4->_23 * m4->_32 - m4->_12 * m4->_21 * m4->_33 - m4->_13 * m4->_22 * m4->_31) * det;
 
-    return mat4_new(a, b, c, d,
-                    e, f, g, h,
-                    i, j, k, l,
-                    m, n, o, p);
+    return 1;
 }
 
 void
-mat4_print(const struct mat4 *m4)
+mat4_print(const mat4 *m4)
 {
     matrix_print(m4->arr, 4, 4);
 }
