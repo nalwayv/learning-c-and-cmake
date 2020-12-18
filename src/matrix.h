@@ -1,6 +1,8 @@
 #ifndef _MATRIX_H_
 #define _MATRIX_H_
 
+#include <stdbool.h>
+
 struct mat2 {
     union {
         struct {
@@ -53,7 +55,7 @@ void mat2_mul(mat2 *dest, const mat2 *a, const mat2 *b);
 void mat2_transpose(mat2 *dest, const mat2 *m2);
 void mat2_cofactor(mat2 *dest, const mat2 *m2);
 float mat2_determinant(const mat2 *m2);
-int mat2_inverse(mat2 *dest, const mat2 *m2);
+bool mat2_inverse(mat2 *dest, const mat2 *m2);
 void mat2_print(const mat2 *m2);
 
 /* MAT 3 */
@@ -70,7 +72,10 @@ void mat3_mul(mat3 *dest, const mat3 *m3, const mat3 *b);
 void mat3_transpose(mat3 *dest, const mat3 *m3);
 void mat3_cofactor(mat3 *dest, const mat3 *m3);
 float mat3_determinant(const mat3 *m3);
-int  mat3_inverse(mat3 *dest, const mat3 *m3);
+bool mat3_inverse(mat3 *dest, const mat3 *m3);
+void mat3_rotate_x(mat3 *dest, float by);
+void mat3_rotate_y(mat3 *dest, float by);
+void mat3_rotate_z(mat3 *dest, float by);
 void mat3_print(const mat3 *m3);
 
 /* MAT 4*/
@@ -88,7 +93,11 @@ void mat4_mul(mat4 *dest, const mat4 *a, const mat4 *b);
 void mat4_transpose(mat4 *dest, const mat4 *m4);
 void mat4_cofactor(mat4 *dest, const mat4 *m4);
 float mat4_determinant(const mat4 *m4);
-int mat4_inverse(mat4 *dest, const mat4 *m4);
+bool mat4_inverse(mat4 *dest, const mat4 *m4);
+void mat4_translation(mat4 *dest, float x, float y, float z);
+void mat4_rotate_x(mat4 *dest, float by);
+void mat4_rotate_y(mat4 *dest, float by);
+void mat4_rotate_z(mat4 *dest, float by);
 void mat4_print(const mat4 *m4);
 
 #endif /**/

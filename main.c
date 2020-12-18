@@ -311,6 +311,15 @@ create_shaders_and_link_to_program(GLuint program, const char* v_file, const cha
         return false;
     }
 
+    /* *
+     * if not using "layout (location = )" within shader
+     * specify what vars to tie data to
+     *
+     * glad_glBindAttribLocation(program, 0, "v_pol");
+     * glad_glBindAttribLocation(program, 1, "v_col");
+     * */
+    
+
     if(not link_shaders(program, v_shader, f_shader, true))
     {
         return false;
@@ -401,13 +410,28 @@ int main(void)
 
     /* --- */
 
-    mat3 points = mat3_new(-0.5f, -0.5f, 0.0f, 
+    mat3 points = mat3_new( 0.0f,  0.5f, 0.0f, 
                             0.5f, -0.5f, 0.0f,
-                            0.0f,  0.5f, 0.0f);
+                           -0.5f, -0.5f, 0.0f);
+    
+    mat3 colour = mat3_identity();
 
-    mat3 colour = mat3_new(0.5f, 0.0f, 0.0f,
-                           0.0f, 0.5f, 0.0f,
-                           0.0f, 0.0f, 1.0f);
+    /*
+    vec3 camera = vec3_new(0.0f, 0.0f, 2.0f);
+    float yaw = 0.0f;
+    
+    mat4 t;
+    mat4_translation(&t, -camera.x, -camera.y, -camera.z);
+    
+    mat4 r;
+    mat4_rotate_y(&r, -yaw);
+    
+    mat4 view;
+    mat4_mul(&view, &r, &t);
+    
+    mat4_print(&view);
+    */
+
     /* --- */
     
     // VBO (vertex buffer object) array of data
@@ -415,25 +439,25 @@ int main(void)
     GLuint points_vbo = 0;
     glad_glGenBuffers(1, &points_vbo);
     glad_glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
-    glad_glBufferData(GL_ARRAY_BUFFER, sizeof(points), points.arr, GL_STATIC_DRAW);
+    glad_glBufferData(GL_ARRAY_BUFFER, sizeof(points.arr), points.arr, GL_STATIC_DRAW);
 
     //  colour
     GLuint colour_vbo = 0;
     glad_glGenBuffers(1, &colour_vbo);
     glad_glBindBuffer(GL_ARRAY_BUFFER, colour_vbo);
-    glad_glBufferData(GL_ARRAY_BUFFER, sizeof(colour), colour.arr, GL_STATIC_DRAW);
+    glad_glBufferData(GL_ARRAY_BUFFER, sizeof(colour.arr), colour.arr, GL_STATIC_DRAW);
     
     // VAO
+    // 0 = position
+    // 1 = colour
     GLuint vao = 0;
     glad_glGenVertexArrays(1, &vao);
     glad_glBindVertexArray(vao);
     
-    //  vao position
     glad_glEnableVertexAttribArray(0);
     glad_glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
     glad_glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
-    //  vao colour
     glad_glEnableVertexAttribArray(1);
     glad_glBindBuffer(GL_ARRAY_BUFFER, colour_vbo);
     glad_glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
@@ -445,6 +469,7 @@ int main(void)
     {
         return EXIT_FAILURE;
     }
+
 
     /* --- */
 
