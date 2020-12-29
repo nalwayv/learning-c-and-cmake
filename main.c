@@ -17,39 +17,34 @@
  *      cmake --build ./build
  *
  *  Example:
- *      cmake -DGLFW_BUILD_DOCS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -S . -B ./build/ -G "MinGW Makefiles"
+ *      cmake -DGLFW_BUILD_DOCS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -S . -B
+ * ./build/ -G "MinGW Makefiles"
  * */
-
+#include <assert.h>
+#include <math.h>
+#include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
-#include <assert.h>
 #include <string.h>
 #include <time.h>
-#include <stdarg.h>
-#include <math.h>
 
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
 
-#include "src/vec.h"
 #include "src/matrix.h"
+#include "src/utils.h"
+#include "src/vec.h"
 
 // #define DEBUG_MODE
 
 #define GL_LOG_FILE "./gl.log"
 #define FRAG_FILE "./shader.frag"
 #define VERT_FILE "./shader.vert"
-#define not !
-#define and &&
-#define or ||
-#define internal static
-#define global_var static
-#define local_persist static
 
 const GLint WIDTH = 640;
 const GLint HEIGHT = 480;
-const char* NAME = "GLFW CMAKE";
+const char *NAME = "GLFW CMAKE";
 
 /* SHADERS */
 
@@ -62,7 +57,6 @@ const char* NAME = "GLFW CMAKE";
 
 /* --- */
 
-
 /* *
  * clamp value between min and max values
  *
@@ -71,35 +65,30 @@ const char* NAME = "GLFW CMAKE";
  * @param max value target.
  * @return value between min and max.
  * */
-internal int
-int_clamp(int value, int min_value, int max_value)
-{
-    return fmax(min_value, fmin(max_value, value));
+internal int int_clamp(int value, int min_value, int max_value) {
+  return fmax(min_value, fmin(max_value, value));
 }
 
 /* *
  * clear current log file info and start again with current time
  * */
-internal bool
-restart_gl_log(void)
-{
-    FILE* fp = NULL;
-    errno_t err = fopen_s(&fp, GL_LOG_FILE, "w");
-    if(err)
-    {
-        fprintf_s(stderr, "ERROR: could not open file %s\n", GL_LOG_FILE);
-        return false;
-    }
-   
-    time_t now = time(NULL);
-    char date_buffer[128];
-    ctime_s(date_buffer, sizeof(*date_buffer) * 128, &now); 
-    
-    fprintf_s(fp, "GL_LOG: time: %s\n", date_buffer);
-    
-    fclose(fp);
-    
-    return true;
+internal bool restart_gl_log(void) {
+  FILE *fp = NULL;
+  errno_t err = fopen_s(&fp, GL_LOG_FILE, "w");
+  if (err) {
+    fprintf_s(stderr, "ERROR: could not open file %s\n", GL_LOG_FILE);
+    return false;
+  }
+
+  time_t now = time(NULL);
+  char date_buffer[128];
+  ctime_s(date_buffer, sizeof(*date_buffer) * 128, &now);
+
+  fprintf_s(fp, "GL_LOG: time: %s\n", date_buffer);
+
+  fclose(fp);
+
+  return true;
 }
 
 /* *
@@ -108,25 +97,22 @@ restart_gl_log(void)
  * @param message a string.
  * @return true if message was appanded to file.
  * */
-internal bool
-gl_log(const char* message, ...)
-{
-    FILE* fp = NULL;
-    errno_t err = fopen_s(&fp, GL_LOG_FILE, "a");
-    if(err)
-    {
-        fprintf_s(stderr, "ERROR: could not open file %s\n", GL_LOG_FILE);
-        return false;
-    }
+internal bool gl_log(const char *message, ...) {
+  FILE *fp = NULL;
+  errno_t err = fopen_s(&fp, GL_LOG_FILE, "a");
+  if (err) {
+    fprintf_s(stderr, "ERROR: could not open file %s\n", GL_LOG_FILE);
+    return false;
+  }
 
-    va_list list;
-    va_start(list, message);
-    fprintf_s(fp, message, va_arg(list, const char*));
-    va_end(list);
-    
-    fclose(fp);
+  va_list list;
+  va_start(list, message);
+  fprintf_s(fp, message, va_arg(list, const char *));
+  va_end(list);
 
-    return true;
+  fclose(fp);
+
+  return true;
 }
 
 /* *
@@ -135,25 +121,22 @@ gl_log(const char* message, ...)
  * @param message string.
  * @return true is message was writen to file.
  * */
-internal bool
-gl_log_error(const char* message, ...)
-{
-    FILE *fp = NULL;
-    errno_t err = fopen_s(&fp, GL_LOG_FILE, "a");
-    if(err)
-    {
-        fprintf_s(stderr, "ERROR: could not open file %s\n", GL_LOG_FILE);
-        return false;
-    }
+internal bool gl_log_error(const char *message, ...) {
+  FILE *fp = NULL;
+  errno_t err = fopen_s(&fp, GL_LOG_FILE, "a");
+  if (err) {
+    fprintf_s(stderr, "ERROR: could not open file %s\n", GL_LOG_FILE);
+    return false;
+  }
 
-    va_list list;
-    va_start(list, message);
-    fprintf_s(fp, message, va_arg(list, const char*));
-    va_end(list);
+  va_list list;
+  va_start(list, message);
+  fprintf_s(fp, message, va_arg(list, const char *));
+  va_end(list);
 
-    fclose(fp);
-    
-    return true;
+  fclose(fp);
+
+  return true;
 }
 
 /* *
@@ -161,13 +144,11 @@ gl_log_error(const char* message, ...)
  *
  * @param idx of shader program.
  * */
-internal void
-print_shader_infolog(GLuint idx)
-{
-    int len = 0;
-    char log[1024];
-    glad_glGetShaderInfoLog(idx, 1024, &len, log);
-    fprintf_s(stderr, "Shader Info Log:\nidx: %u\nlog:%s\n", idx, log);
+internal void print_shader_infolog(GLuint idx) {
+  int len = 0;
+  char log[1024];
+  glad_glGetShaderInfoLog(idx, 1024, &len, log);
+  fprintf_s(stderr, "Shader Info Log:\nidx: %u\nlog:%s\n", idx, log);
 }
 
 /* *
@@ -175,42 +156,37 @@ print_shader_infolog(GLuint idx)
  *
  * @param program id generated by glCreateProgram.
  * */
-internal void
-print_program_infolog(GLuint program)
-{
-    int len = 0;
-    char log[1024];
-    glad_glGetProgramInfoLog(program, 1024, &len, log);
-    fprintf_s(stderr, "Program Info Log:\nidx: %u \nlog: %s\n", program, log);
+internal void print_program_infolog(GLuint program) {
+  int len = 0;
+  char log[1024];
+  glad_glGetProgramInfoLog(program, 1024, &len, log);
+  fprintf_s(stderr, "Program Info Log:\nidx: %u \nlog: %s\n", program, log);
 }
 
 /* *
- * compile shader 
+ * compile shader
  *
  * @param shader id number from glCreateShader.
  * @param shader string source.
  * @param if it should check compile status for errors.
  * @return true if no errors found.
  * */
-internal bool 
-compile_shader(GLuint shader, const char* source, bool check_compile_status)
-{
-    glad_glShaderSource(shader, 1, &source, NULL);
-    glad_glCompileShader(shader);
+internal bool compile_shader(GLuint shader, const char *source,
+                             bool check_compile_status) {
+  glad_glShaderSource(shader, 1, &source, NULL);
+  glad_glCompileShader(shader);
 
-    if(check_compile_status)
-    {
-        GLint check = -1;
-        glad_glGetShaderiv(shader, GL_COMPILE_STATUS, &check);   
-        if(check != GL_TRUE)
-        {
-            fprintf(stderr, "ERROR: failed to create shader\n");
-            print_shader_infolog(shader);
-            return false;
-        }
+  if (check_compile_status) {
+    GLint check = -1;
+    glad_glGetShaderiv(shader, GL_COMPILE_STATUS, &check);
+    if (check != GL_TRUE) {
+      fprintf(stderr, "ERROR: failed to create shader\n");
+      print_shader_infolog(shader);
+      return false;
     }
+  }
 
-    return true;
+  return true;
 }
 
 /* *
@@ -222,26 +198,23 @@ compile_shader(GLuint shader, const char* source, bool check_compile_status)
  * @param if it should check link status for errors.
  * @return true if no errors found.
  * */
-internal bool
-link_shaders(GLuint program, GLuint vert, GLuint frag, bool check_link_status)
-{
-    glad_glAttachShader(program, frag);
-    glad_glAttachShader(program, vert);
-    glad_glLinkProgram(program);
-    
-    if(check_link_status)
-    {
-        int check = -1;
-        glad_glGetProgramiv(program, GL_LINK_STATUS, &check);
-        if(check != GL_TRUE)
-        {
-            fprintf(stderr, "ERROR: failed to link shader program\n");
-            print_program_infolog(program);
-            return false;
-        }
-    }
+internal bool link_shaders(GLuint program, GLuint vert, GLuint frag,
+                           bool check_link_status) {
+  glad_glAttachShader(program, frag);
+  glad_glAttachShader(program, vert);
+  glad_glLinkProgram(program);
 
-    return true;
+  if (check_link_status) {
+    int check = -1;
+    glad_glGetProgramiv(program, GL_LINK_STATUS, &check);
+    if (check != GL_TRUE) {
+      fprintf(stderr, "ERROR: failed to link shader program\n");
+      print_program_infolog(program);
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /* *
@@ -251,29 +224,27 @@ link_shaders(GLuint program, GLuint vert, GLuint frag, bool check_link_status)
  * @param buffer to store text.
  * @return true if file was successfully read.
  * */
-internal bool 
-get_text_from_file(const char* file_path, char *buffer)
-{
-    FILE *fp = NULL;
-    errno_t err = fopen_s(&fp, file_path, "r");
-    if(err)
-    {
-        fprintf_s(stderr, "ERROR: failed to open file %s\n", file_path);
-        return false;
-    }
+internal bool get_text_from_file(const char *file_path, char *buffer) {
+  FILE *fp = NULL;
+  errno_t err = fopen_s(&fp, file_path, "r");
+  if (err) {
+    fprintf_s(stderr, "ERROR: failed to open file %s\n", file_path);
+    return false;
+  }
 
-    char c;
-    int idx = 0;
-    while((c = fgetc(fp)) != EOF)
-    {
-        buffer[idx] = c;
-        ++idx;
-    }
-    buffer[idx] = '\0';
- 
-    fclose(fp);
+  // loop over all text and store chars
+  // into buffer
+  char c;
+  int idx = 0;
+  while ((c = fgetc(fp)) != EOF) {
+    buffer[idx] = c;
+    ++idx;
+  }
+  buffer[idx] = '\0';
 
-    return true;
+  fclose(fp);
+
+  return true;
 }
 
 /*
@@ -284,238 +255,201 @@ get_text_from_file(const char* file_path, char *buffer)
  * @param f_file path for fragment shader data.
  * @return true if shaders were created and linked to program.
  * */
-internal bool
-create_shaders_and_link_to_program(GLuint program, const char* v_file, const char* f_file)
-{
-    char vert_buffer[512];
-    if(not get_text_from_file(v_file, vert_buffer))
-    {
-        return false;
-    }
+internal bool create_shaders_and_link_to_program(GLuint program,
+                                                 const char *v_file,
+                                                 const char *f_file) {
+  char vert_buffer[512];
+  if (not get_text_from_file(v_file, vert_buffer)) {
+    return false;
+  }
 
-    GLuint v_shader = glad_glCreateShader(GL_VERTEX_SHADER);
-    if(not compile_shader(v_shader, vert_buffer, true))
-    {
-        return false;
-    }
+  GLuint v_shader = glad_glCreateShader(GL_VERTEX_SHADER);
+  if (not compile_shader(v_shader, vert_buffer, true)) {
+    return false;
+  }
 
-    char frag_buffer[512];
-    if(not get_text_from_file(f_file, frag_buffer))
-    {
-        return false;
-    }
+  char frag_buffer[512];
+  if (not get_text_from_file(f_file, frag_buffer)) {
+    return false;
+  }
 
-    GLuint f_shader = glad_glCreateShader(GL_FRAGMENT_SHADER);
-    if(not compile_shader(f_shader, frag_buffer, true))
-    {
-        return false;
-    }
+  GLuint f_shader = glad_glCreateShader(GL_FRAGMENT_SHADER);
+  if (not compile_shader(f_shader, frag_buffer, true)) {
+    return false;
+  }
 
-    /* *
-     * if not using "layout (location = )" within shader
-     * specify what vars to tie data to
-     *
-     * glad_glBindAttribLocation(program, 0, "v_pol");
-     * glad_glBindAttribLocation(program, 1, "v_col");
-     * */
-    
+  /* *
+   * if not using "layout (location = )" within shader
+   * specify what vars to tie data to
+   *
+   * glad_glBindAttribLocation(program, 0, "v_pol");
+   * glad_glBindAttribLocation(program, 1, "v_col");
+   * */
 
-    if(not link_shaders(program, v_shader, f_shader, true))
-    {
-        return false;
-    } 
+  if (not link_shaders(program, v_shader, f_shader, true)) {
+    return false;
+  }
 
-    // CLEAN UP
-    glad_glDeleteShader(v_shader);
-    glad_glDeleteShader(f_shader);
-    
-    return true;
+  // CLEAN UP
+  glad_glDeleteShader(v_shader);
+  glad_glDeleteShader(f_shader);
+
+  return true;
 }
 
 /* *
  * print title to console
  * */
-internal void
-title(void)
-{
-    printf("===========================\n");
-    printf(" CMAKE OPEN_GL\n");
-    printf("===========================\n");
+internal void title(void) {
+  printf("===========================\n");
+  printf(" CMAKE OPEN_GL\n");
+  printf("===========================\n");
 }
-
 
 /* --- */
 
 /* CALLBACKS */
 
-internal void
-error_callback(int error, const char* description)
-{
-    gl_log_error("ERROR: id: %i, msg: %s\n", error, description);
+internal void error_callback(int error, const char *description) {
+  gl_log_error("ERROR: id: %i, msg: %s\n", error, description);
 }
 
-internal void
-key_callback(GLFWwindow *window, int key, int scancode, int action, int modes)
-{
-    if(key == GLFW_KEY_Q and action == GLFW_PRESS)
-    {
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-    }
+internal void key_callback(GLFWwindow *window, int key, int scancode,
+                           int action, int modes) {
+  if (key == GLFW_KEY_Q and action == GLFW_PRESS) {
+    glfwSetWindowShouldClose(window, GLFW_TRUE);
+  }
 }
 
 /* --- */
 
-int main(void)
-{
-    title();
+int main(void) {
+  title();
 
-    assert(restart_gl_log());
-    gl_log("GLFW START: version %s\n", glfwGetVersionString());
-    glfwSetErrorCallback(error_callback);
+  assert(restart_gl_log());
+  gl_log("GLFW START: version %s\n", glfwGetVersionString());
+  glfwSetErrorCallback(error_callback);
 
+  if (not glfwInit()) {
+    gl_log_error("glfw init failed to start\n");
+    return EXIT_FAILURE;
+  }
 
-    if(not glfwInit())
-    {
-        gl_log_error("glfw init failed to start\n");
-        return EXIT_FAILURE;
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+
+  GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, NAME, NULL, NULL);
+  if (not window) {
+    gl_log_error("glfw window failed to init\n");
+    return EXIT_FAILURE;
+  }
+
+  glfwSetKeyCallback(window, key_callback);
+  glfwMakeContextCurrent(window);
+
+  /* GLAD */
+  if (not gladLoadGL()) {
+    gl_log_error("glad failed to start\n");
+    return EXIT_FAILURE;
+  }
+
+  const GLubyte *renderer = glad_glGetString(GL_RENDERER);
+  const GLubyte *version = glad_glGetString(GL_VERSION);
+  printf("RENDERER:: %s\nVERSION:: %s\n", renderer, version);
+
+  glad_glEnable(GL_DEPTH_TEST);
+  glad_glDepthFunc(GL_LESS);
+
+  /* --- */
+
+  mat3 points =
+      mat3_new(0.0f, 0.5f, 0.0f, 0.5f, -0.5f, 0.0f, -0.5f, -0.5f, 0.0f);
+
+  mat3 colour = mat3_identity();
+
+  /* --- */
+
+  // VBO (vertex buffer object) array of data
+  //  position
+  GLuint points_vbo = 0;
+  glad_glGenBuffers(1, &points_vbo);
+  glad_glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
+  glad_glBufferData(GL_ARRAY_BUFFER, sizeof(points.arr), points.arr,
+                    GL_STATIC_DRAW);
+
+  //  colour
+  GLuint colour_vbo = 0;
+  glad_glGenBuffers(1, &colour_vbo);
+  glad_glBindBuffer(GL_ARRAY_BUFFER, colour_vbo);
+  glad_glBufferData(GL_ARRAY_BUFFER, sizeof(colour.arr), colour.arr,
+                    GL_STATIC_DRAW);
+
+  // VAO
+  // store values from vbo
+  // 0 = position
+  // 1 = colour
+  GLuint vao = 0;
+  glad_glGenVertexArrays(1, &vao);
+  glad_glBindVertexArray(vao);
+
+  glad_glEnableVertexAttribArray(0);
+  glad_glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
+  glad_glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
+  glad_glEnableVertexAttribArray(1);
+  glad_glBindBuffer(GL_ARRAY_BUFFER, colour_vbo);
+  glad_glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
+  // SHADER PROGRAM
+  GLuint program = glad_glCreateProgram();
+  if (not create_shaders_and_link_to_program(program, VERT_FILE, FRAG_FILE)) {
+    return EXIT_FAILURE;
+  }
+
+  /* --- */
+  double previous = glfwGetTime();
+  int counter = 0;
+
+  while (!glfwWindowShouldClose(window)) {
+    /* FPS */
+    double current = glfwGetTime();
+    double elapsed = current - previous;
+    if (elapsed > 0.25) {
+      previous = current;
+
+      double fps = (double)counter / elapsed;
+      char buffer[128];
+      sprintf_s(buffer, 128, "FPS: %.2f", fps);
+      glfwSetWindowTitle(window, buffer);
+
+      counter = 0;
     }
+    ++counter;
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    
-    GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, NAME, NULL, NULL);
-    if(not window)
-    {
-        gl_log_error("glfw window failed to init\n");
-        return EXIT_FAILURE;
-    }
-   
-    glfwSetKeyCallback(window, key_callback);
-    glfwMakeContextCurrent(window);
-  
-    /* GLAD */
-    if(not gladLoadGL())
-    {
-        gl_log_error("glad failed to start\n");
-        return EXIT_FAILURE;
-    }
+    /* */
 
-    const GLubyte *renderer = glGetString(GL_RENDERER);
-    const GLubyte *version = glGetString(GL_VERSION);
+    glad_glClearColor(0.1, 0.1, 0.1, 1.0);
+    glad_glUseProgram(program);
+    glad_glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glad_glViewport(0, 0, WIDTH, HEIGHT);
 
-    printf("RENDERER:: %s\nVERSION:: %s\n", renderer, version);
+    /* DRAW */
 
-    glad_glEnable(GL_DEPTH_TEST);
-    glad_glDepthFunc(GL_LESS);
-
-    /* --- */
-
-    mat3 points = mat3_new( 0.0f,  0.5f, 0.0f, 
-                            0.5f, -0.5f, 0.0f,
-                           -0.5f, -0.5f, 0.0f);
-    
-    mat3 colour = mat3_identity();
-
-    /*
-    vec3 camera = vec3_new(0.0f, 0.0f, 2.0f);
-    float yaw = 0.0f;
-    
-    mat4 t;
-    mat4_translation(&t, -camera.x, -camera.y, -camera.z);
-    
-    mat4 r;
-    mat4_rotate_y(&r, -yaw);
-    
-    mat4 view;
-    mat4_mul(&view, &r, &t);
-    
-    mat4_print(&view);
-    */
-
-    /* --- */
-    
-    // VBO (vertex buffer object) array of data
-    //  position
-    GLuint points_vbo = 0;
-    glad_glGenBuffers(1, &points_vbo);
-    glad_glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
-    glad_glBufferData(GL_ARRAY_BUFFER, sizeof(points.arr), points.arr, GL_STATIC_DRAW);
-
-    //  colour
-    GLuint colour_vbo = 0;
-    glad_glGenBuffers(1, &colour_vbo);
-    glad_glBindBuffer(GL_ARRAY_BUFFER, colour_vbo);
-    glad_glBufferData(GL_ARRAY_BUFFER, sizeof(colour.arr), colour.arr, GL_STATIC_DRAW);
-    
-    // VAO
-    // 0 = position
-    // 1 = colour
-    GLuint vao = 0;
-    glad_glGenVertexArrays(1, &vao);
     glad_glBindVertexArray(vao);
-    
-    glad_glEnableVertexAttribArray(0);
-    glad_glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
-    glad_glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glad_glDrawArrays(GL_TRIANGLES, 0, 3);
 
-    glad_glEnableVertexAttribArray(1);
-    glad_glBindBuffer(GL_ARRAY_BUFFER, colour_vbo);
-    glad_glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-   
-    
-    // SHADER PROGRAM
-    GLuint program = glad_glCreateProgram();
-    if(not create_shaders_and_link_to_program(program, VERT_FILE, FRAG_FILE))
-    {
-        return EXIT_FAILURE;
-    }
-
+    // wireframe mode
+    // glad_glPolygonMode(GL_FRONT, GL_LINE);
 
     /* --- */
 
-    // fps
-    double previous = glfwGetTime();
-    int counter = 0;
- 
-    while(!glfwWindowShouldClose(window))
-    {
-        double current = glfwGetTime();
-        double elapsed = current - previous;
-        if(elapsed > 0.25)
-        {
-            previous = current;
-            
-            double fps = (double)counter / elapsed;
-            char buffer[128];
-            sprintf_s(buffer, 128, "FPS: %.2f", fps);
-            glfwSetWindowTitle(window, buffer);
+    glfwSwapBuffers(window);
+    glfwPollEvents();
+  }
 
-            counter = 0;
-        }
-        ++counter;
+  // CLEAN UP WINDOW
+  glfwDestroyWindow(window);
+  glfwTerminate();
 
-        glad_glClearColor(0.1, 0.1, 0.1, 1.0);
-        glad_glUseProgram(program);
-        glad_glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glad_glViewport(0, 0, WIDTH, HEIGHT);
-
-        /* DRAW */
-        
-        glad_glBindVertexArray(vao);
-        glad_glDrawArrays(GL_TRIANGLES, 0, 3);
-       
-        // wireframe mode 
-        // glad_glPolygonMode(GL_FRONT, GL_LINE);
-
-        /* --- */
-
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
-
-    // CLEAN UP WINDOW
-    glfwDestroyWindow(window);
-    glfwTerminate();
-
-    return EXIT_SUCCESS;
+  return EXIT_SUCCESS;
 }
