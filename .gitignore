@@ -68,4 +68,5 @@ _deps
 build/
 external/
 .cache/
+notes.org
 
