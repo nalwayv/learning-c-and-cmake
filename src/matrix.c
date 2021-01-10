@@ -9,6 +9,23 @@
 
 /* HELPERS */
 
+internal bool matrix_compar(const float *a, const float *b, int row, int col) {
+  int n = row*col;
+  for (int i = 0; i < n; ++i) {
+    if (a[i] != b[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+internal void matrix_cpy(float *dest, const float *src, int row, int col) {
+  int n = row*col;
+  for (int i = 0; i < n; ++i) {
+    dest[i] = src[i];
+  }
+}
+
 /* generic transpose matrix */
 internal void matrix_transpose(float *dest, const float *src, int row,
                                int col) {
@@ -68,85 +85,82 @@ mat2 mat2_new(float _11, float _12, float _21, float _22) {
 }
 
 void mat2_cpy(mat2 *dest, const mat2 *m2) {
-  for (int i = 0; i < 4; ++i) {
-    dest->arr[i] = m2->arr[i];
-  }
+  dest->_11 = m2->_11;
+  dest->_12 = m2->_12;
+
+  dest->_21 = m2->_21;
+  dest->_22 = m2->_22;
 }
 
-void mat2_add(mat2 *dest, const mat2 *a, const mat2 *b) {
-  for (int i = 0; i < 4; ++i) {
-    dest->arr[i] = a->arr[i] + b->arr[i];
-  }
+mat2 mat2_add(const mat2 *a, const mat2 *b) {
+  return mat2_new(a->_11 + b->_11, a->_12 + b->_12, a->_21 + b->_21,
+                  a->_22 + b->_22);
 }
 
-void mat2_sub(mat2 *dest, const mat2 *a, const mat2 *b) {
-  for (int i = 0; i < 4; ++i) {
-    dest->arr[i] = a->arr[i] - b->arr[i];
-  }
+mat2 mat2_sub(const mat2 *a, const mat2 *b) {
+  return mat2_new(a->_11 - b->_11, a->_12 - b->_12, a->_21 - b->_21,
+                  a->_22 - b->_22);
 }
 
-void mat2_scale(mat2 *dest, const mat2 *m2, float by) {
-  for (int i = 0; i < 4; ++i) {
-    dest->arr[i] = m2->arr[i] * by;
-  }
+mat2 mat2_scale(const mat2 *m2, float by) {
+  return mat2_new(m2->_11 * by, m2->_12 * by, m2->_21 * by, m2->_22 * by);
 }
 
-void mat2_mul(mat2 *dest, const mat2 *a, const mat2 *b) {
-  dest->_11 = a->_11 * b->_11 + a->_12 * b->_21;
-  dest->_12 = a->_11 * b->_12 + a->_12 * b->_22;
-  dest->_21 = a->_21 * b->_11 + a->_22 * b->_21;
-  dest->_22 = a->_21 * b->_12 + a->_22 * b->_22;
+mat2 mat2_mul(const mat2 *a, const mat2 *b) {
+  float _11 = a->_11 * b->_11 + a->_12 * b->_21;
+  float _12 = a->_11 * b->_12 + a->_12 * b->_22;
+
+  float _21 = a->_21 * b->_11 + a->_22 * b->_21;
+  float _22 = a->_21 * b->_12 + a->_22 * b->_22;
+
+  return mat2_new(_11, _12, _21, _22);
 }
 
-void mat2_transpose(mat2 *dest, const mat2 *m2) {
+mat2 mat2_transpose(const mat2 *m2) {
   /* *
    * |a b| -> |a c|
    * |c d|    |b d|
    * */
-  dest->_11 = m2->_11;
-  dest->_12 = m2->_21;
-  dest->_21 = m2->_12;
-  dest->_22 = m2->_22;
+  return mat2_new(m2->_11, m2->_21, m2->_12, m2->_22);
 }
 
-float mat2_cut(const mat2 *m2, int row, int col){
-  if(row == 1 and col == 1) return m2->_11;
-  if(row == 1 and col == 0) return m2->_12;
-  if(row == 0 and col == 1) return m2->_21;
-  if(row == 0 and col == 0) return m2->_22;
+float mat2_cut(const mat2 *m2, int row, int col) {
+  if (row == 1 and col == 1)
+    return m2->_11;
+  if (row == 1 and col == 0)
+    return m2->_12;
+  if (row == 0 and col == 1)
+    return m2->_21;
+  if (row == 0 and col == 0)
+    return m2->_22;
 
   return -1.0;
 }
 
-void mat2_cofactor(mat2 *dest, const mat2 *m2) {
+mat2 mat2_cofactor(const mat2 *m2) {
   /* *
    * | + - |
    * | - + |
    * */
-  dest->_11 = m2->_11;
-  dest->_12 = -m2->_12;
-  dest->_21 = -m2->_21;
-  dest->_22 = m2->_22;
+  return mat2_new(m2->_11, -m2->_12, -m2->_21, m2->_22);
 }
 
-void mat2_minor(mat2 *dest, const mat2 *m2) {
-  dest->_11 = m2->_22;
-  dest->_12 = m2->_12;
-  dest->_21 = m2->_21;
-  dest->_22 = m2->_11;
+mat2 mat2_minor(const mat2 *m2) {
+  return mat2_new(m2->_22, m2->_12, m2->_21, m2->_11);
 }
 
-void mat2_adjugate(mat2 *dest, const mat2 *m2) {
-  mat2 cof;
-  mat2_cofactor(&cof ,m2);
-  mat2_transpose(dest, &cof);
+mat2 mat2_adjugate(const mat2 *m2) {
+  mat2 cof = mat2_cofactor(m2);
+  return mat2_transpose(&cof);
 }
 
 float mat2_determinant(const mat2 *m2) {
   float a = m2->_11;
   float b = m2->_12;
+
   float c = m2->_21;
   float d = m2->_22;
+
   return (a * d) - (b * c);
 }
 
@@ -159,25 +173,23 @@ bool mat2_inverse(mat2 *dest, const mat2 *m2) {
 
   dest->_11 = (m2->_22) * det;
   dest->_12 = -(m2->_12) * det;
+
   dest->_21 = -(m2->_21) * det;
   dest->_22 = (m2->_11) * det;
 
   return true;
 }
 
-void mat2_rotate_z(mat2 *dest, float by) {
+mat2 mat2_rotate_z(const mat2 *m2, float by) {
   /* *
    * |  cos sin |
    * | -sin cos |
    * */
   by = DEG2RAD(by);
-
-  mat2 i = mat2_identity();
-  i._11 = cosf(by);
-  i._12 = sinf(by);
-  i._21 = -sinf(by);
-  i._22 = cosf(by);
-  mat2_cpy(dest, &i);
+  float c = cosf(by);
+  float s = sinf(by);
+  mat2 m = mat2_new(c, s, -s, c);
+  return mat2_mul(m2, &m);
 }
 
 void mat2_print(const mat2 *m2) {
@@ -228,81 +240,79 @@ mat3 mat3_new(float _11, float _12, float _13, float _21, float _22, float _23,
 }
 
 void mat3_cpy(mat3 *dest, const mat3 *m3) {
-  for (int i = 0; i < 9; ++i) {
-    dest->arr[i] = m3->arr[i];
-  }
+  dest->_11 = m3->_11;
+  dest->_12 = m3->_12;
+  dest->_13 = m3->_13;
+
+  dest->_21 = m3->_21;
+  dest->_22 = m3->_22;
+  dest->_23 = m3->_23;
+
+  dest->_31 = m3->_31;
+  dest->_32 = m3->_32;
+  dest->_33 = m3->_33;
 }
 
-void mat3_add(mat3 *dest, const mat3 *a, const mat3 *b) {
-  for (int i = 0; i < 9; ++i) {
-    dest->arr[i] = a->arr[i] + b->arr[i];
-  }
+mat3 mat3_add(const mat3 *a, const mat3 *b) {
+  return mat3_new(a->_11 + b->_11, a->_12 + b->_12, a->_13 + b->_13,
+                  a->_21 + b->_21, a->_22 + b->_22, a->_23 + b->_23,
+                  a->_31 + b->_31, a->_32 + b->_32, a->_33 + b->_33);
 }
 
-void mat3_sub(mat3 *dest, const mat3 *a, const mat3 *b) {
-  for (int i = 0; i < 9; ++i) {
-    dest->arr[i] = a->arr[i] - b->arr[i];
-  }
+mat3 mat3_sub(const mat3 *a, const mat3 *b) {
+  return mat3_new(a->_11 - b->_11, a->_12 - b->_12, a->_13 - b->_13,
+                  a->_21 - b->_21, a->_22 - b->_22, a->_23 - b->_23,
+                  a->_31 - b->_31, a->_32 - b->_32, a->_33 - b->_33);
 }
 
-void mat3_scale(mat3 *dest, const mat3 *m3, float by) {
-  for (int i = 0; i < 9; ++i) {
-    dest->arr[i] = m3->arr[i] * by;
-  }
+mat3 mat3_scale(const mat3 *m3, float by) {
+  return mat3_new(m3->_11 * by, m3->_12 * by, m3->_13 * by, m3->_21 * by,
+                  m3->_22 * by, m3->_23 * by, m3->_31 * by, m3->_32 * by,
+                  m3->_33 * by);
 }
 
-void mat3_mul(mat3 *dest, const mat3 *a, const mat3 *b) {
+mat3 mat3_mul(const mat3 *a, const mat3 *b) {
   /* *
    * | a b c |   | a b c |   | (aa+bd+cg) (ab+be+ch) (ac+bf+ci) |
    * | d e f | x | d e f | = | (da+ed+fg) (db+ee+fh) (dc+ef+fi) |
    * | g h i |   | g h i |   | (ga+hd+ig) (gb+he+ih) (gc+hf+ii) |
    * */
-  dest->_11 = a->_11 * b->_11 + a->_12 * b->_21 + a->_13 * b->_31;
-  dest->_12 = a->_11 * b->_12 + a->_12 * b->_22 + a->_13 * b->_32;
-  dest->_13 = a->_11 * b->_13 + a->_12 * b->_23 + a->_13 * b->_33;
-  dest->_21 = a->_21 * b->_11 + a->_22 * b->_21 + a->_23 * b->_31;
-  dest->_22 = a->_21 * b->_12 + a->_22 * b->_22 + a->_23 * b->_32;
-  dest->_23 = a->_21 * b->_13 + a->_22 * b->_23 + a->_23 * b->_33;
-  dest->_31 = a->_31 * b->_11 + a->_32 * b->_21 + a->_33 * b->_31;
-  dest->_32 = a->_31 * b->_12 + a->_32 * b->_22 + a->_33 * b->_32;
-  dest->_33 = a->_31 * b->_13 + a->_32 * b->_23 + a->_33 * b->_33;
+  float _11 = a->_11 * b->_11 + a->_12 * b->_21 + a->_13 * b->_31;
+  float _12 = a->_11 * b->_12 + a->_12 * b->_22 + a->_13 * b->_32;
+  float _13 = a->_11 * b->_13 + a->_12 * b->_23 + a->_13 * b->_33;
+
+  float _21 = a->_21 * b->_11 + a->_22 * b->_21 + a->_23 * b->_31;
+  float _22 = a->_21 * b->_12 + a->_22 * b->_22 + a->_23 * b->_32;
+  float _23 = a->_21 * b->_13 + a->_22 * b->_23 + a->_23 * b->_33;
+
+  float _31 = a->_31 * b->_11 + a->_32 * b->_21 + a->_33 * b->_31;
+  float _32 = a->_31 * b->_12 + a->_32 * b->_22 + a->_33 * b->_32;
+  float _33 = a->_31 * b->_13 + a->_32 * b->_23 + a->_33 * b->_33;
+
+  return mat3_new(_11, _12, _13, _21, _22, _23, _31, _32, _33);
 }
 
-void mat3_transpose(mat3 *dest, const struct mat3 *m3) {
+mat3 mat3_transpose(const struct mat3 *m3) {
   /* *
    * | a b c |    | a d g |
    * | d e f | -> | b e h |
    * | g h i |    | c f i |
    * */
-  dest->_11 = m3->_11;
-  dest->_12 = m3->_21;
-  dest->_13 = m3->_31;
-  dest->_21 = m3->_12;
-  dest->_22 = m3->_22;
-  dest->_23 = m3->_32;
-  dest->_31 = m3->_13;
-  dest->_32 = m3->_23;
-  dest->_33 = m3->_33;
+  return mat3_new(m3->_11, m3->_21, m3->_31, m3->_12, m3->_22, m3->_32, m3->_13,
+                  m3->_23, m3->_33);
 }
 
-void mat3_cofactor(mat3 *dest, const struct mat3 *m3) {
+mat3 mat3_cofactor(const mat3 *m3) {
   /* *
    * | + - + |
    * | - + - |
    * | + - + |
    * */
-  dest->_11 = m3->_11;
-  dest->_12 = -m3->_12;
-  dest->_13 = m3->_13;
-  dest->_21 = -m3->_21;
-  dest->_22 = m3->_22;
-  dest->_23 = -m3->_23;
-  dest->_31 = m3->_31;
-  dest->_32 = -m3->_32;
-  dest->_33 = m3->_33;
+  return mat3_new(m3->_11, -m3->_12, m3->_13, -m3->_21, m3->_22, -m3->_23,
+                  m3->_31, -m3->_32, m3->_33);
 }
 
-void mat3_cut(mat2 *dest, const mat3 *m3, int r, int c) {
+mat2 mat3_cut(const mat3 *m3, int row, int col) {
   /* *
    * r = 0
    * c = 0
@@ -311,48 +321,54 @@ void mat3_cut(mat2 *dest, const mat3 *m3, int r, int c) {
    * 1 | d e f | -> | - | e  f |
    * 2 | g h i |    | - | h  i |
    * */
+  mat2 result;
+
   int n = 0;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
-      if (i == r or j == c) {
+      if (i == row or j == col) {
         continue;
       }
-      int t = n;
+      int id = n;
       ++n;
-      dest->arr[t] = m3->arr[3 * i + j];
+      result.arr[id] = m3->arr[3 * i + j];
     }
   }
+
+  return result;
 }
 
-void mat3_minor(mat3 *dest, const mat3 *m3) {
+mat3 mat3_minor(const mat3 *m3) {
   /* *
    * | a b c |    | (ei - fh) (di - fg) (dh - eg) |
    * | d e f | -> | (bi - ch) (ai - cg) (ah - bg) |
    * | g h i |    | (bf - ce) (af - cd) (ae - bd) |
    * */
+  mat3 result;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
-      mat2 m2;
-      mat3_cut(&m2, m3, i, j);
+      mat2 cut = mat3_cut(m3, i, j);
       int id = 3 * i + j;
-      dest->arr[id] = mat2_determinant(&m2);
+      result.arr[id] = mat2_determinant(&cut);
     }
   }
+  return result;
 }
 
-void mat3_adjugate(mat3 *dest, const mat3 *m3) {
-  mat3 cof;
-  mat3_cofactor(&cof, m3);
-  mat3_transpose(dest, &cof);
+mat3 mat3_adjugate(const mat3 *m3) {
+  mat3 cof = mat3_cofactor(m3);
+  return mat3_transpose(&cof);
 }
 
 float mat3_determinant(const mat3 *m3) {
   float a = m3->_11;
   float b = m3->_12;
   float c = m3->_13;
+
   float d = m3->_21;
   float e = m3->_22;
   float f = m3->_23;
+
   float g = m3->_31;
   float h = m3->_32;
   float i = m3->_33;
@@ -369,9 +385,11 @@ bool mat3_inverse(mat3 *dest, const mat3 *m3) {
   dest->_11 = (m3->_22 * m3->_33 - m3->_23 * m3->_32) * det;
   dest->_12 = (m3->_13 * m3->_32 - m3->_12 * m3->_33) * det;
   dest->_13 = (m3->_12 * m3->_23 - m3->_13 * m3->_22) * det;
+
   dest->_21 = (m3->_23 * m3->_31 - m3->_21 * m3->_33) * det;
   dest->_22 = (m3->_11 * m3->_33 - m3->_13 * m3->_31) * det;
   dest->_23 = (m3->_13 * m3->_21 - m3->_11 * m3->_23) * det;
+
   dest->_31 = (m3->_21 * m3->_32 - m3->_22 * m3->_31) * det;
   dest->_32 = (m3->_12 * m3->_31 - m3->_11 * m3->_32) * det;
   dest->_33 = (m3->_11 * m3->_22 - m3->_12 * m3->_21) * det;
@@ -379,79 +397,75 @@ bool mat3_inverse(mat3 *dest, const mat3 *m3) {
   return true;
 }
 
-void mat3_scaling(mat3 *dest, float x, float y, float z) {
+mat3 mat3_scaling(const mat3 *m3, const vec3 *v3) {
   /* *
    * | x  0  0 |
    * | 0  y  0 |
    * | 0  0  z |
    * */
-  mat3 i = mat3_identity();
-  i._11 = x;
-  i._22 = y;
-  i._33 = z;
-  mat3_cpy(dest, &i);
+  mat3 m = mat3_zero();
+  m._11 = v3->x;
+  m._22 = v3->y;
+  m._33 = v3->z;
+
+  return mat3_mul(m3, &m);
 }
 
-void mat3_rotate_x(mat3 *dest, float by) {
+mat3 mat3_rotate_x(const mat3 *m3, float by) {
   /* *
    * | 1    0    0 |
    * | 0  cos  sin |
    * | 0 -sin  cos |
    * */
   by = DEG2RAD(by);
+  float c = cosf(by);
+  float s = sinf(by);
 
-  mat3 i = mat3_identity();
-  i._22 = cosf(by);
-  i._23 = sinf(by);
-  i._32 = -sinf(by);
-  i._33 = cosf(by);
-  mat3_cpy(dest, &i);
+  mat3 m = mat3_identity();
+  m._22 = c;
+  m._23 = s;
+  m._32 = -s;
+  m._33 = c;
+
+  return mat3_mul(m3, &m);
 }
 
-void mat3_rotate_y(mat3 *dest, float by) {
+mat3 mat3_rotate_y(const mat3 *m3, float by) {
   /* *
    * | cos  0  -sin |
    * |   0  1     0 |
    * | sin  0   cos |
    * */
   by = DEG2RAD(by);
+  float c = cosf(by);
+  float s = sinf(by);
 
-  mat3 i = mat3_identity();
-  i._11 = cosf(by);
-  i._13 = -sinf(by);
-  i._31 = sinf(by);
-  i._33 = cosf(by);
-  mat3_cpy(dest, &i);
+  mat3 m = mat3_identity();
+  m._11 = c;
+  m._13 = -s;
+  m._31 = s;
+  m._33 = c;
+
+  return mat3_mul(m3, &m);
 }
 
-void mat3_rotate_z(mat3 *dest, float by) {
+mat3 mat3_rotate_z(const mat3 *m3, float by) {
   /* *
    * |  cos  sin    0 |
    * | -sin  cos    0 |
    * |    0    0    1 |
    * */
   by = DEG2RAD(by);
+  float c = cosf(by);
+  float s = sinf(by);
+  mat3 m = mat3_identity();
 
-  mat3 i = mat3_identity();
-  i._11 = cosf(by);
-  i._12 = sinf(by);
-  i._21 = -sinf(by);
-  i._22 = cosf(by);
-  mat3_cpy(dest, &i);
-}
+  m._11 = c;
+  m._12 = s;
+  m._21 = -s;
+  m._22 = c;
 
-void mat3_rotation(mat3 *dest, float pitch, float yaw, float roll) {
-  mat3 z;
-  mat3_rotate_z(&z, roll);
-  mat3 x;
-  mat3_rotate_x(&x, pitch);
-  mat3 y;
-  mat3_rotate_y(&y, yaw);
-
-  mat3 xy;
-  mat3_mul(&xy, &x ,&y);
-
-  mat3_mul(dest, &z, &xy);
+  return mat3_mul(m3, &m);
 }
 
 void mat3_print(const mat3 *m3) {
@@ -524,116 +538,113 @@ mat4 mat4_new(float _11, float _12, float _13, float _14, float _21, float _22,
   return m4;
 }
 
-void mat4_cpy(mat4 *dest, const mat4 *v4) {
-  for (int i = 0; i < 16; ++i) {
-    dest->arr[i] = v4->arr[i];
-  }
+void mat4_cpy(mat4 *dest, const mat4 *m4) {
+  dest->_11 = m4->_11;
+  dest->_12 = m4->_12;
+  dest->_13 = m4->_13;
+  dest->_14 = m4->_14;
+
+  dest->_21 = m4->_21;
+  dest->_22 = m4->_22;
+  dest->_23 = m4->_23;
+  dest->_24 = m4->_24;
+
+  dest->_31 = m4->_31;
+  dest->_32 = m4->_32;
+  dest->_33 = m4->_33;
+  dest->_34 = m4->_34;
+
+  dest->_41 = m4->_41;
+  dest->_42 = m4->_42;
+  dest->_43 = m4->_43;
+  dest->_44 = m4->_44;
 }
 
-void mat4_add(mat4 *dest, const mat4 *a, const mat4 *b) {
-  for (int i = 0; i < 16; ++i) {
-    dest->arr[i] = a->arr[i] + b->arr[i];
-  }
+mat4 mat4_add(const mat4 *a, const mat4 *b) {
+  return mat4_new(
+      a->_11 + b->_11, a->_12 + b->_12, a->_13 + b->_13, a->_14 + b->_14,
+      a->_21 + b->_21, a->_22 + b->_22, a->_23 + b->_23, a->_24 + b->_24,
+      a->_31 + b->_31, a->_32 + b->_32, a->_33 + b->_33, a->_34 + b->_34,
+      a->_41 + b->_41, a->_42 + b->_42, a->_43 + b->_43, a->_44 + b->_44);
 }
 
-void mat4_sub(mat4 *dest, const mat4 *a, const mat4 *b) {
-  for (int i = 0; i < 16; ++i) {
-    dest->arr[i] = a->arr[i] - b->arr[i];
-  }
+mat4 mat4_sub(const mat4 *a, const mat4 *b) {
+  return mat4_new(
+      a->_11 - b->_11, a->_12 - b->_12, a->_13 - b->_13, a->_14 - b->_14,
+      a->_21 - b->_21, a->_22 - b->_22, a->_23 - b->_23, a->_24 - b->_24,
+      a->_31 - b->_31, a->_32 - b->_32, a->_33 - b->_33, a->_34 - b->_34,
+      a->_41 - b->_41, a->_42 - b->_42, a->_43 - b->_43, a->_44 - b->_44);
 }
 
-void mat4_scale(mat4 *dest, const mat4 *a, float by) {
-  for (int i = 0; i < 16; ++i) {
-    dest->arr[i] = a->arr[i] * by;
-  }
+mat4 mat4_scale(const mat4 *m4, float by) {
+  return mat4_new(m4->_11 * by, m4->_12 * by, m4->_13 * by, m4->_14 * by,
+                  m4->_21 * by, m4->_22 * by, m4->_23 * by, m4->_24 * by,
+                  m4->_31 * by, m4->_32 * by, m4->_33 * by, m4->_34 * by,
+                  m4->_41 * by, m4->_42 * by, m4->_43 * by, m4->_44 * by);
 }
 
-void mat4_mul(mat4 *dest, const mat4 *a, const mat4 *b) {
-  dest->_11 =
+mat4 mat4_mul(const mat4 *a, const mat4 *b) {
+  float _11 =
       a->_11 * b->_11 + a->_12 * b->_21 + a->_13 * b->_31 + a->_14 * b->_41;
-  dest->_12 =
+  float _12 =
       a->_11 * b->_12 + a->_12 * b->_22 + a->_13 * b->_32 + a->_14 * b->_42;
-  dest->_13 =
+  float _13 =
       a->_11 * b->_13 + a->_12 * b->_23 + a->_13 * b->_33 + a->_14 * b->_43;
-  dest->_14 =
+  float _14 =
       a->_11 * b->_14 + a->_12 * b->_24 + a->_13 * b->_34 + a->_14 * b->_44;
-  dest->_21 =
+  float _21 =
       a->_21 * b->_11 + a->_22 * b->_21 + a->_23 * b->_31 + a->_24 * b->_41;
-  dest->_22 =
+  float _22 =
       a->_21 * b->_12 + a->_22 * b->_22 + a->_23 * b->_32 + a->_24 * b->_42;
-  dest->_23 =
+  float _23 =
       a->_21 * b->_13 + a->_22 * b->_23 + a->_23 * b->_33 + a->_24 * b->_43;
-  dest->_24 =
+  float _24 =
       a->_21 * b->_14 + a->_22 * b->_24 + a->_23 * b->_34 + a->_24 * b->_44;
-  dest->_31 =
+  float _31 =
       a->_31 * b->_11 + a->_32 * b->_21 + a->_33 * b->_31 + a->_34 * b->_41;
-  dest->_32 =
+  float _32 =
       a->_31 * b->_12 + a->_32 * b->_22 + a->_33 * b->_32 + a->_34 * b->_42;
-  dest->_33 =
+  float _33 =
       a->_31 * b->_13 + a->_32 * b->_23 + a->_33 * b->_33 + a->_34 * b->_43;
-  dest->_34 =
+  float _34 =
       a->_31 * b->_14 + a->_32 * b->_24 + a->_33 * b->_34 + a->_34 * b->_44;
-  dest->_41 =
+  float _41 =
       a->_41 * b->_11 + a->_42 * b->_21 + a->_43 * b->_31 + a->_44 * b->_41;
-  dest->_42 =
+  float _42 =
       a->_41 * b->_12 + a->_42 * b->_22 + a->_43 * b->_32 + a->_44 * b->_42;
-  dest->_43 =
+  float _43 =
       a->_41 * b->_13 + a->_42 * b->_23 + a->_43 * b->_33 + a->_44 * b->_43;
-  dest->_44 =
+  float _44 =
       a->_41 * b->_14 + a->_42 * b->_24 + a->_43 * b->_34 + a->_44 * b->_44;
+  return mat4_new(_11, _12, _13, _14, _21, _22, _23, _24, _31, _32, _33, _34,
+                  _41, _42, _43, _44);
 }
 
-void mat4_transpose(mat4 *dest, const mat4 *m4) {
+mat4 mat4_transpose(const mat4 *m4) {
   /* *
    * | a b c d |    | a e i m |
    * | e f g h | -> | b f j n |
    * | i j k l |    | c g k o |
    * | m n o p |    | d h l p |
    * */
-  dest->_11 = m4->_11;
-  dest->_12 = m4->_21;
-  dest->_13 = m4->_31;
-  dest->_14 = m4->_41;
-  dest->_21 = m4->_12;
-  dest->_22 = m4->_22;
-  dest->_23 = m4->_32;
-  dest->_24 = m4->_42;
-  dest->_31 = m4->_13;
-  dest->_32 = m4->_23;
-  dest->_33 = m4->_33;
-  dest->_34 = m4->_34;
-  dest->_41 = m4->_14;
-  dest->_42 = m4->_24;
-  dest->_43 = m4->_34;
-  dest->_44 = m4->_44;
+  return mat4_new(m4->_11, m4->_21, m4->_31, m4->_41, m4->_12, m4->_22, m4->_32,
+                  m4->_42, m4->_13, m4->_23, m4->_33, m4->_43, m4->_14, m4->_24,
+                  m4->_34, m4->_44);
 }
 
-void mat4_cofactor(mat4 *dest, const mat4 *m4) {
+mat4 mat4_cofactor(const mat4 *m4) {
   /* *
    * |  +  -  +  - |
    * |  -  +  -  + |
    * |  +  -  +  - |
    * |  -  +  -  + |
    * */
-  dest->_11 = m4->_11;
-  dest->_12 = -m4->_12;
-  dest->_13 = m4->_13;
-  dest->_14 = -m4->_14;
-  dest->_21 = -m4->_21;
-  dest->_22 = m4->_22;
-  dest->_23 = -m4->_23;
-  dest->_24 = m4->_24;
-  dest->_31 = m4->_31;
-  dest->_32 = -m4->_32;
-  dest->_33 = m4->_33;
-  dest->_34 = -m4->_34;
-  dest->_41 = -m4->_41;
-  dest->_42 = m4->_42;
-  dest->_43 = -m4->_43;
-  dest->_44 = m4->_44;
+  return mat4_new(m4->_11, -m4->_12, m4->_13, -m4->_14, -m4->_21, m4->_22,
+                  -m4->_23, m4->_24, m4->_31, -m4->_32, m4->_33, -m4->_34,
+                  -m4->_41, m4->_42, -m4->_43, m4->_44);
 }
 
-void mat4_cut(mat3 *dest, const mat4 *m4, int row, int col) {
+mat3 mat4_cut(const mat4 *m4, int row, int col) {
   /* *
    * r = 0
    * c = 0
@@ -643,6 +654,7 @@ void mat4_cut(mat3 *dest, const mat4 *m4, int row, int col) {
    * 2 | i j k l |    | - | j  k  l |
    * 3 | m n o p |    | - | n  o  p |
    * */
+  mat3 result;
   int n = 0;
   for (int i = 0; i < 4; ++i) {
     for (int j = 0; j < 4; ++j) {
@@ -651,25 +663,26 @@ void mat4_cut(mat3 *dest, const mat4 *m4, int row, int col) {
       }
       int t = n;
       ++n;
-      dest->arr[t] = m4->arr[4 * i + j];
+      result.arr[t] = m4->arr[4 * i + j];
     }
   }
+  return result;
 }
 
-void mat4_minor(mat4 *dest, const mat4 *m4) {
+mat4 mat4_minor(const mat4 *m4) {
+  mat4 result;
   for (int i = 0; i < 4; ++i) {
     for (int j = 0; j < 4; ++j) {
-      mat3 m3;
-      mat4_cut(&m3, m4, i, j);
-      dest->arr[4 * i + j] = mat3_determinant(&m3);
+      mat3 cut = mat4_cut(m4, i, j);
+      result.arr[4 * i + j] = mat3_determinant(&cut);
     }
   }
+  return result;
 }
 
-void mat4_adjugate(mat4 *dest, const mat4 *m4) {
-  mat4 cof;
-  mat4_cofactor(&cof, m4);
-  mat4_transpose(dest, &cof);
+mat4 mat4_adjugate(const mat4 *m4) {
+  mat4 cof = mat4_cofactor(m4);
+  return mat4_transpose(&cof);
 }
 
 float mat4_determinant(const mat4 *m4) {
@@ -689,6 +702,7 @@ float mat4_determinant(const mat4 *m4) {
   float n = m4->_42;
   float o = m4->_43;
   float p = m4->_44;
+
   return d * g * j * m - c * h * j * m - d * f * k * m + b * h * k * m +
          c * f * l * m - b * g * l * m - d * g * i * n + c * h * i * n +
          d * e * k * n - a * h * k * n - c * e * l * n + a * g * l * n +
@@ -772,7 +786,7 @@ bool mat4_inverse(mat4 *dest, const mat4 *m4) {
   return true;
 }
 
-void mat4_translation(mat4 *dest, float x, float y, float z) {
+mat4 mat4_translation(const mat4 *m4, const vec3 *v3) {
   /* *
    * row order
    * |  1  0  0  0 |
@@ -781,30 +795,32 @@ void mat4_translation(mat4 *dest, float x, float y, float z) {
    * ---------------
    * |  x  y  z  1 |
    * */
+  mat4 m = mat4_identity();
 
-  mat4 i = mat4_identity();
-  i._41 = x;
-  i._42 = y;
-  i._43 = z;
-  mat4_cpy(dest, &i);
+  m._41 = v3->x;
+  m._42 = v3->y;
+  m._43 = v3->z;
+
+  return mat4_mul(m4, &m);
 }
 
-void mat4_scaling(mat4 *dest, float x, float y, float z) {
+mat4 mat4_scaling(const mat4 *m4, const vec3 *v3) {
   /* *
    * | x  0  0  0 |
    * | 0  y  0  0 |
    * | 0  0  z  0 |
    * | 0  0  0  1 |
    * */
+  mat4 m = mat4_identity();
 
-  mat4 i = mat4_identity();
-  i._11 = x;
-  i._22 = y;
-  i._33 = z;
-  mat4_cpy(dest, &i);
+  m._11 = v3->x;
+  m._22 = v3->y;
+  m._33 = v3->z;
+
+  return mat4_mul(m4, &m);
 }
 
-void mat4_rotate_x(mat4 *dest, float by) {
+mat4 mat4_rotate_x(const mat4 *m4, float by) {
   /* *
    * | 1    0     0  0 |
    * | 0  cos  -sin  0 |
@@ -812,16 +828,19 @@ void mat4_rotate_x(mat4 *dest, float by) {
    * | 0    0     0  1 |
    * */
   by = DEG2RAD(by);
+  float c = cosf(by);
+  float s = sinf(by);
+  mat4 m = mat4_identity();
 
-  mat4 i = mat4_identity();
-  i._22 = cosf(by);
-  i._23 = -sinf(by);
-  i._32 = sinf(by);
-  i._33 = cosf(by);
-  mat4_cpy(dest, &i);
+  m._22 = c;
+  m._23 = -s;
+  m._32 = s;
+  m._33 = c;
+
+  return mat4_mul(m4, &m);
 }
 
-void mat4_rotate_y(mat4 *dest, float by) {
+mat4 mat4_rotate_y(const mat4 *m4, float by) {
   /* *
    * |  cos  0  sin  0 |
    * |    0  1    0  0 |
@@ -829,16 +848,19 @@ void mat4_rotate_y(mat4 *dest, float by) {
    * |    0  0    0  1 |
    * */
   by = DEG2RAD(by);
+  float c = cosf(by);
+  float s = sinf(by);
+  mat4 m = mat4_identity();
 
-  mat4 i = mat4_identity();
-  i._11 = cosf(by);
-  i._13 = sinf(by);
-  i._31 = -sinf(by);
-  i._33 = cosf(by);
-  mat4_cpy(dest, &i);
+  m._11 = c;
+  m._13 = s;
+  m._31 = -s;
+  m._33 = c;
+
+  return mat4_mul(m4, &m);
 }
 
-void mat4_rotate_z(mat4 *dest, float by) {
+mat4 mat4_rotate_z(const mat4 *m4, float by) {
   /* *
    * |  cos  sin  0  0 |
    * | -sin  cos  0  0 |
@@ -846,26 +868,53 @@ void mat4_rotate_z(mat4 *dest, float by) {
    * |    0    0  0  1 |
    * */
   by = DEG2RAD(by);
+  float c = cosf(by);
+  float s = sinf(by);
+  mat4 m = mat4_identity();
 
-  mat4 i = mat4_identity();
-  i._11 = cosf(by);
-  i._12 = sinf(by);
-  i._21 = -sinf(by);
-  i._22 = cosf(by);
-  mat4_cpy(dest, &i);
+  m._11 = c;
+  m._12 = s;
+  m._21 = -s;
+  m._22 = c;
+
+  return mat4_mul(m4, &m);
 }
 
-void mat4_rotation(mat4 *dest, float pitch, float yaw, float roll) {
-  mat4 z;
-  mat4_rotate_z(&z, roll);
-  mat4 x;
-  mat4_rotate_x(&x, pitch);
-  mat4 y;
-  mat4_rotate_y(&y, yaw);
+// TODO
+internal mat4 mat4_rotate(const mat4 *m4, float by, const vec3 *v3) {
+  /* https://en.wikipedia.org/wiki/Rotation_matrix
+   * c = cos
+   * s = sin
+   * t = 1-c
+   * | (c + x*x*t),   (x*y*t - z*s), (x*z*t + y*s) |  |
+   * | (y*x*t + z*s), (c + y*y*t),   (y*z*t - x*s) |  |
+   * | (z*x*t - y*s), (z*y*t + x*s), (c + z*z*t)   |  |
+   * --------------------------------------------------
+   * |                                             |  |
+   */
+  by = DEG2RAD(by);
+  float x = v3->x;
+  float y = v3->y;
+  float z = v3->z;
+  float c = cosf(by);
+  float s = sinf(by);
+  float t = 1.0 - c;
 
-  mat4 xy;
-  mat4_mul(&xy, &x, &y);
-  mat4_mul(dest, &z, &xy);
+  mat4 m = mat4_identity();
+  m._11 = c + (x*x*t);
+  m._12 = (x*y*t) - (z*s);
+  m._13 = (x*z*t) + (y*s);
+
+  m._21 = (y*x*t) + (z*s);
+  m._22 = c + (y*y*t);
+  m._23 = (y*z*t) - (x*s);
+
+  m._31 = (z*x*t) - (y*s);
+  m._32 = (z*y*t) + (x*s);
+  m._33 = c + (z*z*t);
+
+
+  return mat4_identity();
 }
 
 void mat4_print(const mat4 *m4) {

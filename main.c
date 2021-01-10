@@ -36,8 +36,6 @@
 #include "src/utils.h"
 #include "src/vec.h"
 
-// #define DEBUG_MODE
-
 #define GL_LOG_FILE "./gl.log"
 #define FRAG_FILE "./shader.frag"
 #define VERT_FILE "./shader.vert"
@@ -61,8 +59,8 @@ const char *NAME = "GLFW CMAKE";
  * clamp value between min and max values
  *
  * @param value target.
- * @param min value target.
- * @param max value target.
+ * @param min_value target.
+ * @param max_value target.
  * @return value between min and max.
  * */
 internal int int_clamp(int value, int min_value, int max_value) {
@@ -95,6 +93,7 @@ internal bool restart_gl_log(void) {
  * Log to gl.log file
  *
  * @param message a string.
+ * @param ... char*
  * @return true if message was appanded to file.
  * */
 internal bool gl_log(const char *message, ...) {
@@ -119,6 +118,7 @@ internal bool gl_log(const char *message, ...) {
  * log error to gl.log
  *
  * @param message string.
+ * @param ... char*
  * @return true is message was writen to file.
  * */
 internal bool gl_log_error(const char *message, ...) {
@@ -167,8 +167,8 @@ internal void print_program_infolog(GLuint program) {
  * compile shader
  *
  * @param shader id number from glCreateShader.
- * @param shader string source.
- * @param if it should check compile status for errors.
+ * @param *source shader string.
+ * @param check_compile_status if true.
  * @return true if no errors found.
  * */
 internal bool compile_shader(GLuint shader, const char *source,
@@ -195,7 +195,7 @@ internal bool compile_shader(GLuint shader, const char *source,
  * @param program id generated from glCreateProgram.
  * @param vert shader id from glCreateShader.
  * @param frag shader id from glCreateShader.
- * @param if it should check link status for errors.
+ * @param check_link_status if true.
  * @return true if no errors found.
  * */
 internal bool link_shaders(GLuint program, GLuint vert, GLuint frag,
@@ -220,8 +220,8 @@ internal bool link_shaders(GLuint program, GLuint vert, GLuint frag,
 /* *
  * get text from file and copy into buffer
  *
- * @param file_path of text file.
- * @param buffer to store text.
+ * @param *file_path of text file.
+ * @param *buffer to store text.
  * @return true if file was successfully read.
  * */
 internal bool get_text_from_file(const char *file_path, char *buffer) {
@@ -251,8 +251,8 @@ internal bool get_text_from_file(const char *file_path, char *buffer) {
  * create shaders vert and frag from file and link to shader program
  *
  * @param program id generated from glCreateProgram.
- * @param v_file path for vertex shader data.
- * @param f_file path for fragment shader data.
+ * @param *v_file path for vertex shader data.
+ * @param *f_file path for fragment shader data.
  * @return true if shaders were created and linked to program.
  * */
 internal bool create_shaders_and_link_to_program(GLuint program,
@@ -296,6 +296,53 @@ internal bool create_shaders_and_link_to_program(GLuint program,
 
   return true;
 }
+
+/* *
+ * update fps counter
+ *
+ * @param *dest_prev_time from glfwGetTime get will be updated to store new prev_time
+ * @param *window from glfwCreatewindow
+ * */
+internal void update_fps(double *dest_prev_time,  GLFWwindow *window) {
+  local_persist int counter;
+  double current = glfwGetTime();
+  double elapsed = current - *dest_prev_time;
+
+  if(elapsed > 0.25) {
+    *dest_prev_time = current;
+    double fps = (double)counter / elapsed;
+
+    char buffer[128];
+    sprintf(buffer, "FPS: %.3f", fps);
+    glfwSetWindowTitle(window, buffer);
+    counter = 0;
+  }
+
+  ++counter;
+}
+
+internal mat4 perspective(float fov, float aspect, float near, float far) {
+  /* *
+   * | sx  0  0  0 |
+   * |  0 sy  0  0 |
+   * |  0  0 sz -1 |
+   * |  0  0 ss  0 |
+   * */
+
+  float range = 1.0 / tanf(fov * 0.5);
+  float fn = 1.0 / (far - near);
+
+  float sx = range / aspect;
+  float sy = range;
+  float sz = (near + far) * fn;
+  float pz = (2.0 * far * near) * fn;
+
+  return mat4_new( sx, 0.0, 0.0,  0.0,
+		  0.0,  sy, 0.0,  0.0,
+		  0.0, 0.0,  sz, -1.0,
+		  0.0, 0.0,  pz,  0.0);
+}
+
 
 /* *
  * print title to console
@@ -406,42 +453,39 @@ int main(void) {
     return EXIT_FAILURE;
   }
 
-  /* --- */
-  double previous = glfwGetTime();
-  int counter = 0;
+  glad_glUseProgram(program);
 
-  while (!glfwWindowShouldClose(window)) {
-    /* FPS */
-    double current = glfwGetTime();
-    double elapsed = current - previous;
-    if (elapsed > 0.25) {
-      previous = current;
+  /* FPS Timer */
+  double previous_fps = glfwGetTime();
 
-      double fps = (double)counter / elapsed;
-      char buffer[128];
-      sprintf_s(buffer, 128, "FPS: %.2f", fps);
-      glfwSetWindowTitle(window, buffer);
+  mat4 projection = perspective(DEG2RAD(67.0),
+				(float)WIDTH / (float)HEIGHT,
+				0.1,
+				100.0);
 
-      counter = 0;
-    }
-    ++counter;
+
+  /* Defaults */
+  glad_glEnable(GL_CULL_FACE);
+  glad_glCullFace(GL_BACK);
+  glad_glFrontFace(GL_CW);
+
+  while (not glfwWindowShouldClose(window)) {
+    update_fps(&previous_fps, window);
 
     /* */
-
     glad_glClearColor(0.1, 0.1, 0.1, 1.0);
-    glad_glUseProgram(program);
     glad_glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glad_glViewport(0, 0, WIDTH, HEIGHT);
 
     /* DRAW */
-
+    glad_glUseProgram(program);
     glad_glBindVertexArray(vao);
     glad_glDrawArrays(GL_TRIANGLES, 0, 3);
 
     // wireframe mode
     // glad_glPolygonMode(GL_FRONT, GL_LINE);
 
-    /* --- */
+    /* */
 
     glfwSwapBuffers(window);
     glfwPollEvents();
