@@ -1,25 +1,3 @@
-/*
- * SIMPLE cmake/glfw oject
- *
- * CMAKE COMMAND
- * -------------
- * * Build:
- *      "MSVS": cmake -S . -B ./build
- *      "MINGW": cmake -S . -B ./build -G "MinGW Makefiles"
- *
- *      *Recompile:
- *          cmake -C ./build
- *
- *      *CMAKE_COMMANDS:
- *          "-DCMAKE_EXPORT_COMPILE_COMMANDS=1": export compile_commands.json
- *
- *  * Compile:
- *      cmake --build ./build
- *
- *  Example:
- *      cmake -DGLFW_BUILD_DOCS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -S . -B
- * ./build/ -G "MinGW Makefiles"
- * */
 #include <assert.h>
 #include <math.h>
 #include <stdarg.h>
@@ -44,14 +22,6 @@ const GLint WIDTH = 640;
 const GLint HEIGHT = 480;
 const char *NAME = "GLFW CMAKE";
 
-/* SHADERS */
-
-/* *
- * layout(location=): where in vbo to get data
- * in: get from previous stage of render pipeline
- * out: send info to next stage of render pipeline
- * uniform: global with data passed in from cpu
- * */
 
 /* --- */
 
