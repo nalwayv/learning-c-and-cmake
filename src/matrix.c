@@ -913,8 +913,7 @@ internal mat4 mat4_rotate(const mat4 *m4, float by, const vec3 *v3) {
   m._32 = (z*y*t) + (x*s);
   m._33 = c + (z*z*t);
 
-
-  return mat4_identity();
+  return m;
 }
 
 void mat4_print(const mat4 *m4) {

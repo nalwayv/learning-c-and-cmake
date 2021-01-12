@@ -157,7 +157,7 @@ vec3 vec3_mat3(const vec3 *v3, const float* mat_arr)
 {
     float x = mat_arr[0]*v3->x + mat_arr[1]*v3->y + mat_arr[2]*v3->z;
     float y = mat_arr[3]*v3->x + mat_arr[4]*v3->y + mat_arr[5]*v3->z;
-    float z = mat_arr[7]*v3->x + mat_arr[8]*v3->y + mat_arr[9]*v3->z;
+    float z = mat_arr[6]*v3->x + mat_arr[7]*v3->y + mat_arr[8]*v3->z;
     return vec3_new(x,y,z);
 }
 
